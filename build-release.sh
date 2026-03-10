@@ -50,6 +50,14 @@ cp -r ".xcode-build/Build/Products/$xcode_configuration/AeroSpace.app" .release
 cp -r .build/apple/Products/Release/aerospace .release
 
 ################
+### SIGN APP ###
+################
+
+codesign --force -s "$codesign_identity" --entitlements ./resources/AeroSpace.entitlements \
+    --options runtime --timestamp .release/AeroSpace.app/Contents/MacOS/AeroSpace
+codesign --force -s "$codesign_identity" --options runtime --timestamp .release/AeroSpace.app
+
+################
 ### SIGN CLI ###
 ################
 
