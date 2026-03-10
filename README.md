@@ -1,10 +1,10 @@
-# AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
+## ⚠️ Why This Fork
 
-## Why This Fork
+This fork exist just to add BSP layouts to AeroSpace.
 
-This fork exists to add a BSP-focused window insertion strategy and to make branch-local signed + notarized releases for day-to-day use.
+> <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can [download a **signed** release from the releases page](https://github.com/pablopunk/AeroSpace/releases).
 
-### BSP
+### 🆕✨ BSP
 
 Finally:
 
@@ -15,7 +15,7 @@ window-insertion-policy = 'bsp'
 Accordion layouts will ignore it obviously.
 
 
-### Float after a number of nested splits
+### 🆕✨ Float after a number of nested splits
 
 This will make it so when you split a layout X times, the next window you open will float automatically.
 
@@ -23,10 +23,8 @@ This will make it so when you split a layout X times, the next window you open w
 bsp-float-after-splits = 2 # put the number of sub-splits you want to allow before floating
 ```
 
-### Notes
+# AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
 
-- This repository keeps upstream AeroSpace as the base project and only layers fork-specific behavior/releases on top
-- Upstream docs are still the best source for the rest of AeroSpace features and commands
 
 <img src="./resources/Assets.xcassets/AppIcon.appiconset/icon.png" width="40%" align="right">
 
