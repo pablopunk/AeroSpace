@@ -53,7 +53,7 @@ cp -r .build/apple/Products/Release/aerospace .release
 ### SIGN CLI ###
 ################
 
-codesign -s "$codesign_identity" .release/aerospace
+codesign -s "$codesign_identity" --timestamp --options runtime .release/aerospace
 
 ################
 ### VALIDATE ###
