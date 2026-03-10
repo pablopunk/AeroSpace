@@ -223,6 +223,19 @@ private func unbindAndGetBindingDataForNewWindow(_ windowId: UInt32, _ macApp: M
 @MainActor
 private func unbindAndGetBindingDataForNewTilingWindow(_ workspace: Workspace, window: Window?) -> BindingData {
     window?.unbindFromParent() // It's important to unbind to get correct data from below
+    if workspace.shouldIgnoreAdvancedWindowInsertion {
+        return defaultBindingDataForNewTilingWindow(workspace)
+    }
+    switch config.windowInsertionPolicy {
+        case .default:
+            return defaultBindingDataForNewTilingWindow(workspace)
+        case .bsp:
+            return bspBindingDataForNewTilingWindow(workspace)
+    }
+}
+
+@MainActor
+private func defaultBindingDataForNewTilingWindow(_ workspace: Workspace) -> BindingData {
     let mruWindow = workspace.mostRecentWindowRecursive
     if let mruWindow, let tilingParent = mruWindow.parent as? TilingContainer {
         return BindingData(
@@ -237,6 +250,39 @@ private func unbindAndGetBindingDataForNewTilingWindow(_ workspace: Workspace, w
             index: INDEX_BIND_LAST,
         )
     }
+}
+
+@MainActor
+private func bspBindingDataForNewTilingWindow(_ workspace: Workspace) -> BindingData {
+    let anchor = workspace.bspInsertionAnchor()
+    guard let anchor, let anchorParent = anchor.parent as? TilingContainer else {
+        return BindingData(
+            parent: workspace.rootTilingContainer,
+            adaptiveWeight: WEIGHT_AUTO,
+            index: INDEX_BIND_LAST,
+        )
+    }
+
+    if config.bspFloatAfterSplits > 0 && anchor.bspSplitCount >= config.bspFloatAfterSplits {
+        return BindingData(parent: workspace, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
+    }
+
+    let prevBinding = anchor.unbindFromParent()
+    let newParent = TilingContainer(
+        parent: prevBinding.parent,
+        adaptiveWeight: prevBinding.adaptiveWeight,
+        bspSplitOrientation(anchorParent),
+        .tiles,
+        index: prevBinding.index,
+    )
+    anchor.bind(to: newParent, adaptiveWeight: WEIGHT_AUTO, index: 0)
+    return BindingData(parent: newParent, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
+}
+
+private func bspSplitOrientation(_ anchorParent: TilingContainer) -> Orientation {
+    anchorParent.parent is Workspace && anchorParent.children.count <= 1
+        ? anchorParent.orientation
+        : anchorParent.orientation.opposite
 }
 
 @MainActor

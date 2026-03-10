@@ -20,6 +20,14 @@ auto-reload-config = false
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true
 
+# How new tiling windows are inserted into the tree.
+# Possible values: default|bsp
+window-insertion-policy = 'default'
+
+# In BSP mode, float the new window when the focused leaf already sits behind this many visible splits.
+# 0 disables the threshold.
+bsp-float-after-splits = 0
+
 # See: https://nikitabobko.github.io/AeroSpace/guide#layouts
 # The 'accordion-padding' specifies the size of accordion padding
 # You can set 0 to disable the padding feature

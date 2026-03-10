@@ -22,6 +22,22 @@ extension Workspace {
         children.filterIsInstance(of: Window.self)
     }
 
+    @MainActor var focusedTilingWindow: Window? {
+        guard let window = focus.windowOrNil, window.nodeWorkspace == self, window.parent is TilingContainer else {
+            return nil
+        }
+        return window
+    }
+
+    @MainActor var shouldIgnoreAdvancedWindowInsertion: Bool {
+        let insertionAnchor = focusedTilingWindow ?? mostRecentWindowRecursive
+        return (insertionAnchor?.parent as? TilingContainer)?.layout == .accordion
+    }
+
+    @MainActor func bspInsertionAnchor() -> Window? {
+        focusedTilingWindow ?? rootTilingContainer.mostRecentWindowRecursive
+    }
+
     @MainActor var macOsNativeFullscreenWindowsContainer: MacosFullscreenWindowsContainer {
         let containers = children.filterIsInstance(of: MacosFullscreenWindowsContainer.self)
         return switch containers.count {
@@ -46,5 +62,19 @@ extension Workspace {
         return monitorDescriptions.lazy
             .compactMap { $0.resolveMonitor(sortedMonitors: sortedMonitors) }
             .first
+    }
+}
+
+extension Window {
+    @MainActor var bspSplitCount: Int {
+        var splitCount = 0
+        var current = parent
+        while let tilingContainer = current as? TilingContainer {
+            if tilingContainer.children.count > 1 {
+                splitCount += 1
+            }
+            current = tilingContainer.parent
+        }
+        return splitCount
     }
 }

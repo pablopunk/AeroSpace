@@ -106,6 +106,8 @@ private let configParser: [String: any ParserProtocol<Config>] = [
 
     "enable-normalization-flatten-containers": Parser(\.enableNormalizationFlattenContainers, parseBool),
     "enable-normalization-opposite-orientation-for-nested-containers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
+    "window-insertion-policy": Parser(\.windowInsertionPolicy, parseWindowInsertionPolicy),
+    "bsp-float-after-splits": Parser(\.bspFloatAfterSplits, parseNonNegativeInt),
 
     "default-root-container-layout": Parser(\.defaultRootContainerLayout, parseLayout),
     "default-root-container-orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
@@ -309,6 +311,13 @@ private func parseLayout(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace
         .flatMap { $0.parseLayout().orFailure(.semantic(backtrace, "Can't parse layout '\($0)'")) }
 }
 
+private func parseWindowInsertionPolicy(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace) -> ParsedToml<WindowInsertionPolicy> {
+    parseString(raw, backtrace).flatMap {
+        WindowInsertionPolicy(rawValue: $0)
+            .orFailure(.semantic(backtrace, "Can't parse window insertion policy '\($0)'"))
+    }
+}
+
 private func skipParsing<T: Sendable>(_ value: T) -> @Sendable (_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace) -> ParsedToml<T> {
     { _, _ in .success(value) }
 }
@@ -335,6 +344,11 @@ private func parseDefaultContainerOrientation(_ raw: TOMLValueConvertible, _ bac
         DefaultContainerOrientation(rawValue: $0)
             .orFailure(.semantic(backtrace, "Can't parse default container orientation '\($0)'"))
     }
+}
+
+private func parseNonNegativeInt(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace) -> ParsedToml<Int> {
+    parseInt(raw, backtrace)
+        .filter(.semantic(backtrace, "Must be greater than or equal to 0")) { $0 >= 0 }
 }
 
 extension Parsed where Failure == String {
