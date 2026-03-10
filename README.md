@@ -15,7 +15,11 @@ Finally:
 window-insertion-policy = 'bsp'
 ```
 
-Accordion layouts will ignore it obviously.
+https://github.com/user-attachments/assets/9214f0d4-55dd-4860-9f0c-c4051dc039c9
+
+
+> [!NOTE]  
+> Accordion layouts will ignore it obviously.
 
 
 ### 🆕✨ Float after a number of nested splits
@@ -25,6 +29,12 @@ This will make it so when you split a layout X times, the next window you open w
 ```toml
 bsp-float-after-splits = 2 # put the number of sub-splits you want to allow before floating
 ```
+
+Both configs in action:
+
+
+https://github.com/user-attachments/assets/d53b9ad2-c1e0-444d-888b-23bd2c970066
+
 
 # AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
 
