@@ -37,10 +37,10 @@ targets:
       configs:
         Debug:
           PRODUCT_NAME: AeroSpace-Debug
-          PRODUCT_BUNDLE_IDENTIFIER: bobko.aerospace.debug
+          PRODUCT_BUNDLE_IDENTIFIER: com.pablopunk.aerospace.debug
         Release:
           PRODUCT_NAME: AeroSpace
-          PRODUCT_BUNDLE_IDENTIFIER: bobko.aerospace
+          PRODUCT_BUNDLE_IDENTIFIER: com.pablopunk.aerospace
           SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
           GCC_TREAT_WARNINGS_AS_ERRORS: YES
     entitlements:
