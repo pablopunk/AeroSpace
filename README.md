@@ -1,5 +1,33 @@
 # AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
 
+## Why This Fork
+
+This fork exists to add a BSP-focused window insertion strategy and to make branch-local signed + notarized releases for day-to-day use.
+
+### BSP
+
+Finally:
+
+```toml
+window-insertion-policy = 'bsp'
+```
+
+Accordion layouts will ignore it obviously.
+
+
+### Float after a number of nested splits
+
+This will make it so when you split a layout X times, the next window you open will float automatically.
+
+```toml
+bsp-float-after-splits = 2 # put the number of sub-splits you want to allow before floating
+```
+
+### Notes
+
+- This repository keeps upstream AeroSpace as the base project and only layers fork-specific behavior/releases on top
+- Upstream docs are still the best source for the rest of AeroSpace features and commands
+
 <img src="./resources/Assets.xcassets/AppIcon.appiconset/icon.png" width="40%" align="right">
 
 AeroSpace is an i3-like tiling window manager for macOS
