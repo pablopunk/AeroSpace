@@ -2,7 +2,10 @@
 
 This fork exist just to add BSP layouts to AeroSpace.
 
-> <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can [download a **signed** release from the releases page](https://github.com/pablopunk/AeroSpace/releases).
+> <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can download a release from the [releases page](https://github.com/pablopunk/AeroSpace/releases).
+> or just use homebrew: `brew install --cask pablopunk/brew/aerospace`
+>
+> 🔐 they are both *signed apps* so you won't run into any issues like in other forks.
 
 ### 🆕✨ BSP
 
