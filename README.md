@@ -1,6 +1,6 @@
-## ⚠️ Why This Fork
+## ⚠️ THESE FEATURES ARE ONLY ON THIS FORK ⚠️
 
-This fork exist just to add BSP layouts to AeroSpace.
+This fork exists just to add BSP layouts to AeroSpace, but I added a few more features I was missing from the original app. Since the author doesn't want any features similar to these (which is fair) I won't be making PRs for now.
 
 > <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can download a release from the [releases page](https://github.com/pablopunk/AeroSpace/releases).
 > or just use homebrew: `brew install pablopunk/brew/aerospace`
@@ -25,8 +25,6 @@ workspace-preview-show-empty = false
 - Workspaces are arranged in keyboard order (1–0, Q–P, A–L, Z–M)
 - Tiling layout is visualized with correct split directions
 - Focused workspace and focused window are highlighted
-- Click any workspace cell to switch to it
-- Follows system dark/light mode with blur background
 
 <!-- video coming soon -->
 
@@ -58,6 +56,7 @@ Both configs in action:
 
 https://github.com/user-attachments/assets/d53b9ad2-c1e0-444d-888b-23bd2c970066
 
+## ⚠️ END OF FEATURES OF THIS FORK ⚠️
 
 # AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
 
