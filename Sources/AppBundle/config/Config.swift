@@ -62,6 +62,12 @@ struct Config: ConvenienceCopyable {
     var modes: [String: Mode] = [:]
     var onWindowDetected: [WindowDetectedCallback] = []
     var onModeChanged: [any Command] = []
+
+    // Workspace preview configuration
+    // nil = disabled, non-nil = the modifier combo that triggers the HUD (e.g. [.option, .command, .control])
+    var workspacePreviewModifiers: NSEvent.ModifierFlags? = nil
+    var workspacePreviewShowEmpty: Bool = false
+    var workspacePreviewAfterWorkspaceSwitch: Bool = false
 }
 
 enum DefaultContainerOrientation: String {

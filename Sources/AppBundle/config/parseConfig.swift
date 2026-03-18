@@ -127,6 +127,12 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 
+    // Workspace preview
+    // Value is a modifier string like 'alt-cmd-ctrl', or false/omitted to disable
+    "workspace-preview-enabled": Parser(\.workspacePreviewModifiers, parseWorkspacePreviewEnabled),
+    "workspace-preview-show-empty": Parser(\.workspacePreviewShowEmpty, parseBool),
+    "workspace-preview-after-workspace-switch": Parser(\.workspacePreviewAfterWorkspaceSwitch, parseBool),
+
     // Deprecated
     "non-empty-workspaces-root-containers-layout-on-startup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
     "indent-for-nested-containers-with-the-same-orientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
@@ -359,6 +365,33 @@ extension Parsed where Failure == String {
 
 func parseBool(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace) -> ParsedToml<Bool> {
     raw.bool.orFailure(expectedActualTypeError(expected: .bool, actual: raw.type, backtrace))
+}
+
+/// Parses 'workspace-preview-enabled'.
+/// Accepts a modifier string like 'alt-cmd-ctrl' → NSEvent.ModifierFlags?
+/// Accepts false/omitted → nil (disabled)
+func parseWorkspacePreviewEnabled(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace) -> ParsedToml<NSEvent.ModifierFlags?> {
+    // false means disabled
+    if let boolVal = raw.bool {
+        return boolVal
+            ? .failure(.semantic(backtrace, "'workspace-preview-enabled' must be a modifier string like 'alt-cmd-ctrl', not 'true'. Use 'false' to disable."))
+            : .success(nil)
+    }
+    guard let str = raw.string else {
+        return .failure(.semantic(backtrace, "'workspace-preview-enabled' must be a modifier string like 'alt-cmd-ctrl' or false to disable"))
+    }
+    let parts = str.split(separator: "-").map(String.init)
+    var flags = NSEvent.ModifierFlags()
+    for part in parts {
+        guard let flag = modifiersMap[part] else {
+            return .failure(.semantic(backtrace, "Unknown modifier '\(part)' in '\(str)'. Valid modifiers: alt, ctrl, cmd, shift"))
+        }
+        flags.insert(flag)
+    }
+    if flags.isEmpty {
+        return .failure(.semantic(backtrace, "'workspace-preview-enabled' modifier string '\(str)' produced no valid modifiers"))
+    }
+    return .success(flags)
 }
 
 struct TomlBacktrace: CustomStringConvertible, Equatable {

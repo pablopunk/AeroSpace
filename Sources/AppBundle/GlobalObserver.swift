@@ -75,5 +75,21 @@ enum GlobalObserver {
                 }
             }
         }
+
+        // Monitor modifier keys for workspace preview
+        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { event in
+            Task { @MainActor in
+                guard let requiredModifiers = config.workspacePreviewModifiers else { return }
+
+                let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                let held = modifiers.isSuperset(of: requiredModifiers)
+
+                if held {
+                    WorkspacePreviewViewModel.shared.modifiersDidBecomeHeld()
+                } else {
+                    WorkspacePreviewViewModel.shared.modifiersDidRelease()
+                }
+            }
+        }
     }
 }
