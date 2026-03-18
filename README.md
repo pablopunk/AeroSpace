@@ -9,6 +9,8 @@ This fork exists just to add BSP layouts to AeroSpace, but I added a few more fe
 
 ### 🆕✨ Workspace Preview HUD
 
+<img width="724" height="340" alt="CleanShot 2026-03-18 at 14 55 08" src="https://github.com/user-attachments/assets/4a49508d-b569-40a9-8f43-230e5f5cddb6" />
+
 A heads-up display that shows all your workspaces with a mini tiling layout preview while you hold a modifier key combo.
 
 ```toml
