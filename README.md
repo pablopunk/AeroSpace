@@ -2,9 +2,12 @@
 
 This fork exists just to add BSP layouts to AeroSpace, but I added a few more features I was missing from the original app. Since the author doesn't want any features similar to these (which is fair) I won't be making PRs for now.
 
-> <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can download a release from the [releases page](https://github.com/pablopunk/AeroSpace/releases).
+### <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> Download the fork
+
+> from the [releases page](https://github.com/pablopunk/AeroSpace/releases)
+> 
 > or just use homebrew: `brew install pablopunk/brew/aerospace`
->
+> 
 > 🔐 they are both *signed apps* so you won't run into any issues like in other forks.
 
 ### 🆕✨ Workspace Preview HUD
