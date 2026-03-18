@@ -63,12 +63,18 @@ final class WorkspacePreviewViewModel: ObservableObject {
 
     // MARK: - Focus change (from focus.swift)
 
+    /// Called on any focus change (window or workspace). Only refreshes if already visible.
     func onFocusChanged() {
         if isVisible {
-            // Already showing – refresh in place so focus indicator updates
+            updateWorkspaces()
+        }
+    }
+
+    /// Called only when the focused workspace changes. Can trigger show in afterWorkspaceSwitch mode.
+    func onWorkspaceChanged() {
+        if isVisible {
             updateWorkspaces()
         } else if modifiersAreHeld && config.workspacePreviewAfterWorkspaceSwitch {
-            // afterWorkspaceSwitch mode: show on first workspace change while held
             show()
         }
     }

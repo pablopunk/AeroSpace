@@ -185,6 +185,7 @@ extension Workspace {
 }
 
 @MainActor private func onWorkspaceChanged(_ oldWorkspace: String, _ newWorkspace: String) {
+    WorkspacePreviewViewModel.shared.onWorkspaceChanged()
     broadcastEvent(.workspaceChanged(
         workspace: newWorkspace,
         prevWorkspace: oldWorkspace,
