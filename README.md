@@ -7,6 +7,29 @@ This fork exist just to add BSP layouts to AeroSpace.
 >
 > 🔐 they are both *signed apps* so you won't run into any issues like in other forks.
 
+### 🆕✨ Workspace Preview HUD
+
+A heads-up display that shows all your workspaces with a mini tiling layout preview while you hold a modifier key combo.
+
+```toml
+# Show HUD while holding the modifier combo (set to false to disable)
+workspace-preview-enabled = 'alt-cmd-ctrl'
+
+# Only show the HUD after switching a workspace (not just on hold)
+workspace-preview-after-workspace-switch = true
+
+# Also show empty workspaces (default: false)
+workspace-preview-show-empty = false
+```
+
+- Workspaces are arranged in keyboard order (1–0, Q–P, A–L, Z–M)
+- Tiling layout is visualized with correct split directions
+- Focused workspace and focused window are highlighted
+- Click any workspace cell to switch to it
+- Follows system dark/light mode with blur background
+
+<!-- video coming soon -->
+
 ### 🆕✨ BSP
 
 Finally:
