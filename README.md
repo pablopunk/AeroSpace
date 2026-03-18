@@ -1,4 +1,4 @@
-## ⚠️ THESE FEATURES ARE ONLY ON THIS FORK ⚠️
+## ⚠️ FEATURES ONLY ON THIS FORK ⚠️
 
 This fork exists just to add BSP layouts to AeroSpace, but I added a few more features I was missing from the original app. Since the author doesn't want any features similar to these (which is fair) I won't be making PRs for now.
 
@@ -26,7 +26,10 @@ workspace-preview-show-empty = false
 - Tiling layout is visualized with correct split directions
 - Focused workspace and focused window are highlighted
 
-<!-- video coming soon -->
+
+https://github.com/user-attachments/assets/5c4c1529-8439-41f5-8dce-cd33bdeb5c18
+
+
 
 ### 🆕✨ BSP
 
