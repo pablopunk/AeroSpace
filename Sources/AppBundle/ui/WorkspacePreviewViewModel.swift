@@ -23,7 +23,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
 
     struct ContainerInfo {
         let orientation: Orientation
-        let layout: Layout
         let children: [NodeInfo]
     }
 
@@ -37,7 +36,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
         let name: String
         let isVisible: Bool
         let isFocused: Bool
-        let hasWindows: Bool
         let tilingTree: NodeInfo?
         let floatingWindowCount: Int
         let focusedWindowId: UInt32?
@@ -46,7 +44,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
     struct MonitorPreview: Identifiable {
         let id: Int
         let name: String
-        let rect: Rect
         let isFocused: Bool
         let workspaces: [WorkspacePreview]
     }
@@ -135,7 +132,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
                 name: workspace.name,
                 isVisible: workspace.isVisible,
                 isFocused: isFocused,
-                hasWindows: hasWindows,
                 tilingTree: tilingTree,
                 floatingWindowCount: workspace.floatingWindows.count,
                 focusedWindowId: isFocused ? focusedWindowId : nil,
@@ -154,7 +150,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
             return MonitorPreview(
                 id: monitor.monitorAppKitNsScreenScreensId,
                 name: monitor.name,
-                rect: monitor.rect,
                 isFocused: focusedWorkspace.workspaceMonitor.rect.topLeftCorner == monitor.rect.topLeftCorner,
                 workspaces: workspaces,
             )
@@ -191,7 +186,6 @@ final class WorkspacePreviewViewModel: ObservableObject {
         if let container = node as? TilingContainer {
             return .container(ContainerInfo(
                 orientation: container.orientation,
-                layout: container.layout,
                 children: container.children.map { snapshotNode($0) },
             ))
         } else if let window = node as? Window {
