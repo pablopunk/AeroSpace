@@ -1,13 +1,18 @@
-## ⚠️ THESE FEATURES ARE ONLY ON THIS FORK ⚠️
+## ⚠️ FEATURES ONLY ON THIS FORK ⚠️
 
 This fork exists just to add BSP layouts to AeroSpace, but I added a few more features I was missing from the original app. Since the author doesn't want any features similar to these (which is fair) I won't be making PRs for now.
 
-> <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> You can download a release from the [releases page](https://github.com/pablopunk/AeroSpace/releases).
+### <img src="https://cdn-icons-png.flaticon.com/512/9205/9205302.png" width="13" /> Download the fork
+
+> from the [releases page](https://github.com/pablopunk/AeroSpace/releases)
+> 
 > or just use homebrew: `brew install pablopunk/brew/aerospace`
->
+> 
 > 🔐 they are both *signed apps* so you won't run into any issues like in other forks.
 
 ### 🆕✨ Workspace Preview HUD
+
+<img width="724" height="340" alt="CleanShot 2026-03-18 at 14 55 08" src="https://github.com/user-attachments/assets/4a49508d-b569-40a9-8f43-230e5f5cddb6" />
 
 A heads-up display that shows all your workspaces with a mini tiling layout preview while you hold a modifier key combo.
 
@@ -26,7 +31,10 @@ workspace-preview-show-empty = false
 - Tiling layout is visualized with correct split directions
 - Focused workspace and focused window are highlighted
 
-<!-- video coming soon -->
+
+https://github.com/user-attachments/assets/5c4c1529-8439-41f5-8dce-cd33bdeb5c18
+
+
 
 ### 🆕✨ BSP
 
