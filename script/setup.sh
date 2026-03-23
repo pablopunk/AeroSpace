@@ -4,6 +4,13 @@ set -u # Treat unset variables and parameters other than the special parameters 
 set -o pipefail # Any command failed in the pipe fails the whole pipe
 # set -x # Print shell commands as they are executed (or you can try -v which is less verbose)
 
+if /bin/test -z "${AEROSPACE_ENV_LOADED:-}" && /bin/test -f ./.env; then
+    set -a
+    source ./.env
+    set +a
+    export AEROSPACE_ENV_LOADED=1
+fi
+
 # Don't forget to also update ./ShellParserGenerated/Package.swift
 export antlr_version="4.13.1"
 

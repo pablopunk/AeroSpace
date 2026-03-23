@@ -3,7 +3,7 @@ cd "$(dirname "$0")"
 source ./script/setup.sh
 
 build_version="0.0.0-SNAPSHOT"
-codesign_identity="aerospace-codesign-certificate"
+codesign_identity="${DEVELOPER_ID:-aerospace-codesign-certificate}"
 while test $# -gt 0; do
     case $1 in
         --build-version) build_version="$2"; shift 2;;
@@ -11,6 +11,58 @@ while test $# -gt 0; do
         *) echo "Unknown option $1" > /dev/stderr; exit 1 ;;
     esac
 done
+
+require-env() {
+    local name="$1"
+    if test -z "${!name:-}"; then
+        echo "$name must be set to notarize the release" > /dev/stderr
+        exit 1
+    fi
+}
+
+notarize-release() {
+    require-env APPLEID
+    require-env APPLEIDPASS
+    require-env TEAMID
+
+    local notarization_dir=".release/notarization-submission"
+    local notarization_zip=".release/notarization-submission.zip"
+
+    rm -rf "$notarization_dir" "$notarization_zip"
+    mkdir -p "$notarization_dir"
+    cp -R .release/AeroSpace.app "$notarization_dir"
+    cp -R .release/aerospace "$notarization_dir"
+
+    ditto -c -k --keepParent "$notarization_dir" "$notarization_zip"
+
+    xcrun notarytool submit "$notarization_zip" \
+        --apple-id "$APPLEID" \
+        --team-id "$TEAMID" \
+        --password "$APPLEIDPASS" \
+        --wait
+
+    xcrun stapler staple .release/AeroSpace.app
+    xcrun stapler validate .release/AeroSpace.app
+
+    spctl -a -vv .release/AeroSpace.app
+    spctl -a -vv -t exec .release/aerospace
+}
+
+should-notarize-release() {
+    if test -n "${APPLEID:-}${APPLEIDPASS:-}${TEAMID:-}"; then
+        require-env APPLEID
+        require-env APPLEIDPASS
+        require-env TEAMID
+        return 0
+    fi
+
+    if ! grep -q SNAPSHOT <<< "$build_version"; then
+        echo "APPLEID, APPLEIDPASS and TEAMID must be set in .env for non-SNAPSHOT release builds" > /dev/stderr
+        exit 1
+    fi
+
+    return 1
+}
 
 #############
 ### BUILD ###
@@ -61,7 +113,7 @@ codesign --force -s "$codesign_identity" --options runtime --timestamp .release/
 ### SIGN CLI ###
 ################
 
-codesign -s "$codesign_identity" --timestamp --options runtime .release/aerospace
+codesign --force -s "$codesign_identity" --timestamp --options runtime .release/aerospace
 
 ################
 ### VALIDATE ###
@@ -112,6 +164,16 @@ check-contains-hash .release/aerospace
 
 codesign -v .release/AeroSpace.app
 codesign -v .release/aerospace
+
+###################
+### NOTARIZATION ###
+###################
+
+if should-notarize-release; then
+    notarize-release
+else
+    echo "Skipping notarization for SNAPSHOT build"
+fi
 
 ############
 ### PACK ###
