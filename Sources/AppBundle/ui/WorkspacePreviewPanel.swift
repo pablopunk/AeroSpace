@@ -3,40 +3,64 @@ import SwiftUI
 
 @MainActor
 final class WorkspacePreviewPanel: NSPanelHud {
-    static let shared = WorkspacePreviewPanel()
+    private let monitorId: Int
 
-    var isShowing: Bool { isVisible }
-
-    override private init() {
+    init(monitor: WorkspacePreviewViewModel.MonitorPreview) {
+        self.monitorId = monitor.id
         super.init()
-
-        let hostingView = NSHostingView(rootView: WorkspacePreviewView())
-        self.contentView = hostingView
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = true
+        update(monitor: monitor)
     }
 
-    func show() {
-        guard config.workspacePreviewModifiers != nil else { return }
-
-        // Size to fit content, then center on screen
+    func update(monitor: WorkspacePreviewViewModel.MonitorPreview) {
+        self.contentView = NSHostingView(rootView: WorkspacePreviewView(monitor: monitor))
         if let hostingView = self.contentView as? NSHostingView<WorkspacePreviewView> {
-            let fittingSize = hostingView.fittingSize
-            setContentSize(fittingSize)
+            setContentSize(hostingView.fittingSize)
         }
-        if let screen = NSScreen.main {
-            let screenRect = screen.visibleFrame
-            let panelSize = self.frame.size
-            let x = screenRect.midX - panelSize.width / 2
-            let y = screenRect.midY - panelSize.height / 2
-            self.setFrameOrigin(NSPoint(x: x, y: y))
+        centerOnScreen()
+    }
+
+    private func centerOnScreen() {
+        let screen = NSScreen.screens.getOrNil(atIndex: monitorId - 1)
+        let visibleFrame = screen?.visibleFrame ?? NSScreen.main?.visibleFrame
+        guard let visibleFrame else { return }
+        let panelSize = self.frame.size
+        let x = visibleFrame.midX - panelSize.width / 2
+        let y = visibleFrame.midY - panelSize.height / 2
+        self.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+}
+
+@MainActor
+final class WorkspacePreviewPanelsController {
+    static let shared = WorkspacePreviewPanelsController()
+
+    private var panels: [Int: WorkspacePreviewPanel] = [:]
+
+    var isShowing: Bool { panels.values.contains(where: \.isVisible) }
+
+    private init() {}
+
+    func show(monitors: [WorkspacePreviewViewModel.MonitorPreview]) {
+        let visibleIds = Set(monitors.map(\.id))
+
+        for monitor in monitors {
+            let panel = panels[monitor.id] ?? WorkspacePreviewPanel(monitor: monitor)
+            panel.update(monitor: monitor)
+            panel.orderFrontRegardless()
+            panels[monitor.id] = panel
         }
 
-        self.orderFrontRegardless()
+        for (id, panel) in panels where !visibleIds.contains(id) {
+            panel.orderOut(nil)
+        }
     }
 
     func hide() {
-        self.orderOut(nil)
+        for panel in panels.values {
+            panel.orderOut(nil)
+        }
     }
 }

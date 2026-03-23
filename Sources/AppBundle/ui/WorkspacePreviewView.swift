@@ -2,9 +2,10 @@ import SwiftUI
 import Common
 
 struct WorkspacePreviewView: View {
-    @ObservedObject var viewModel = WorkspacePreviewViewModel.shared
+    let monitor: WorkspacePreviewViewModel.MonitorPreview
+    private let columnSpacing: CGFloat = 10
+    private let rowSpacing: CGFloat = 14
 
-    // Keyboard layout mapping (QWERTY)
     private let keyboardRows: [[String]] = [
         ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
         ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -13,103 +14,108 @@ struct WorkspacePreviewView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Only show rows that have at least one workspace
-            ForEach(0..<keyboardRows.count, id: \.self) { rowIndex in
-                let row = keyboardRows[rowIndex]
-                let rowHasWorkspace = row.contains { workspaceForKey($0) != nil }
-                if rowHasWorkspace {
-                    HStack(spacing: 6) {
-                        ForEach(0..<row.count, id: \.self) { colIndex in
-                            let key = row[colIndex]
-                            if let workspace = workspaceForKey(key) {
-                                WorkspaceCell(
-                                    workspace: workspace,
-                                    keyLabel: key
-                                )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(monitor.name)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                if monitor.isFocused {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.9))
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                ForEach(0..<keyboardRows.count, id: \.self) { rowIndex in
+                    let row = keyboardRows[rowIndex]
+                    let rowWorkspaces = row.compactMap(workspaceForKey)
+                    if !rowWorkspaces.isEmpty {
+                        HStack(spacing: columnSpacing) {
+                            ForEach(rowWorkspaces) { workspace in
+                                WorkspaceCell(workspace: workspace)
                             }
                         }
                     }
                 }
-            }
 
-            // Overflow workspaces (non-keyboard-matched)
-            let overflowWorkspaces = viewModel.workspacePreviews.filter { !isKeyMapped($0.name) }
-            if !overflowWorkspaces.isEmpty {
-                Divider().padding(.horizontal)
-                HStack(spacing: 6) {
-                    ForEach(overflowWorkspaces) { workspace in
-                        WorkspaceCell(
-                            workspace: workspace,
-                            keyLabel: nil
-                        )
+                let overflowWorkspaces = monitor.workspaces.filter { !isKeyMapped($0.name) }
+                if !overflowWorkspaces.isEmpty {
+                    Divider()
+                        .overlay(Color.white.opacity(0.08))
+                    HStack(spacing: columnSpacing) {
+                        ForEach(overflowWorkspaces) { workspace in
+                            WorkspaceCell(workspace: workspace)
+                        }
                     }
                 }
             }
         }
-        .padding(16)
+        .padding(14)
         .background(
             VisualEffectBlur(
                 material: .hudWindow,
                 blendingMode: .behindWindow
             )
         )
-        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(monitor.isFocused ? Color.accentColor.opacity(0.75) : Color.white.opacity(0.08), lineWidth: monitor.isFocused ? 1.5 : 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func workspaceForKey(_ key: String) -> WorkspacePreviewViewModel.WorkspacePreview? {
-        viewModel.workspacePreviews.first { $0.name.uppercased() == key.uppercased() }
+        monitor.workspaces.first { $0.name.uppercased() == key.uppercased() }
     }
 
     private func isKeyMapped(_ name: String) -> Bool {
-        let allKeys = keyboardRows.flatMap { $0 }
-        return allKeys.contains { $0.uppercased() == name.uppercased() }
+        keyboardRows.flatMap { $0 }.contains { $0.uppercased() == name.uppercased() }
     }
 }
 
-struct WorkspaceCell: View {
+private struct WorkspaceCell: View {
     let workspace: WorkspacePreviewViewModel.WorkspacePreview
-    let keyLabel: String?
 
     var body: some View {
-        VStack(spacing: 4) {
-            // Header
+        VStack(spacing: 5) {
             HStack(spacing: 4) {
-                if let keyLabel = keyLabel {
-                    Text(keyLabel)
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 14, height: 14)
-                        .background(Color.secondary.opacity(0.2))
-                        .cornerRadius(3)
-                }
-                Spacer()
+                Text(workspace.name)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
                 if workspace.isVisible {
                     Circle()
                         .fill(Color.green)
-                        .frame(width: 5, height: 5)
+                        .frame(width: 6, height: 6)
                 }
             }
 
-            // Mini tiling layout preview
             TilingLayoutView(
                 tilingTree: workspace.tilingTree,
                 floatingWindowCount: workspace.floatingWindowCount,
                 focusedWindowId: workspace.focusedWindowId
             )
-            .frame(height: 50)
-            .cornerRadius(3)
+            .frame(height: 44)
+            .cornerRadius(4)
         }
-        .padding(6)
-        .frame(width: 100)
+        .padding(8)
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
                 .fill(workspace.isFocused ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.1))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(workspace.isFocused ? Color.accentColor : Color.clear, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(workspace.isFocused ? Color.accentColor : Color.clear, lineWidth: 1.25)
         )
+        .frame(width: 96, height: 74)
         .contentShape(Rectangle())
         .onTapGesture {
             Task { @MainActor in
@@ -121,7 +127,6 @@ struct WorkspaceCell: View {
     }
 }
 
-// Visual effect blur wrapper
 struct VisualEffectBlur: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode

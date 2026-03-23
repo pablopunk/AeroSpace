@@ -8,12 +8,13 @@ final class WorkspacePreviewViewModel: ObservableObject {
     static let shared = WorkspacePreviewViewModel()
 
     @Published var workspacePreviews: [WorkspacePreview] = []
+    @Published var monitorPreviews: [MonitorPreview] = []
     @Published var focusedWorkspaceName: String = ""
 
     /// Whether the configured modifier combo is currently held down
     private(set) var modifiersAreHeld: Bool = false
 
-    var isVisible: Bool { WorkspacePreviewPanel.shared.isShowing }
+    var isVisible: Bool { WorkspacePreviewPanelsController.shared.isShowing }
 
     struct WindowInfo {
         let appName: String
@@ -42,6 +43,14 @@ final class WorkspacePreviewViewModel: ObservableObject {
         let focusedWindowId: UInt32?
     }
 
+    struct MonitorPreview: Identifiable {
+        let id: Int
+        let name: String
+        let rect: Rect
+        let isFocused: Bool
+        let workspaces: [WorkspacePreview]
+    }
+
     private init() {}
 
     // MARK: - Modifier key events (from GlobalObserver)
@@ -67,6 +76,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
     func onFocusChanged() {
         if isVisible {
             updateWorkspaces()
+            WorkspacePreviewPanelsController.shared.show(monitors: monitorPreviews)
         }
     }
 
@@ -74,6 +84,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
     func onWorkspaceChanged() {
         if isVisible {
             updateWorkspaces()
+            WorkspacePreviewPanelsController.shared.show(monitors: monitorPreviews)
         } else if modifiersAreHeld && config.workspacePreviewAfterWorkspaceSwitch {
             show()
         }
@@ -84,11 +95,11 @@ final class WorkspacePreviewViewModel: ObservableObject {
     func show() {
         guard config.workspacePreviewModifiers != nil else { return }
         updateWorkspaces()
-        WorkspacePreviewPanel.shared.show()
+        WorkspacePreviewPanelsController.shared.show(monitors: monitorPreviews)
     }
 
     func hide() {
-        WorkspacePreviewPanel.shared.hide()
+        WorkspacePreviewPanelsController.shared.hide()
     }
 
     // MARK: - Data
@@ -96,6 +107,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
     func updateWorkspaces() {
         guard config.workspacePreviewModifiers != nil else {
             workspacePreviews = []
+            monitorPreviews = []
             return
         }
 
@@ -105,7 +117,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
 
         focusedWorkspaceName = focusedWorkspace.name
 
-        workspacePreviews = allWorkspaces.compactMap { workspace in
+        let previews: [WorkspacePreview] = allWorkspaces.compactMap { workspace in
             let hasWindows = !workspace.allLeafWindowsRecursive.isEmpty
             let isFocused = workspace == focusedWorkspace
 
@@ -129,7 +141,49 @@ final class WorkspacePreviewViewModel: ObservableObject {
                 focusedWindowId: isFocused ? focusedWindowId : nil
             )
         }
+
+        workspacePreviews = previews
+
+        let previewsByName: [String: WorkspacePreview] = Dictionary(uniqueKeysWithValues: previews.map { ($0.name, $0) })
+        monitorPreviews = sortedMonitors.map { monitor in
+            let workspaces = allWorkspaces
+                .filter { $0.workspaceMonitor.rect.topLeftCorner == monitor.rect.topLeftCorner }
+                .compactMap { previewsByName[$0.name] }
+                .sorted(by: compareWorkspaces)
+
+            return MonitorPreview(
+                id: monitor.monitorAppKitNsScreenScreensId,
+                name: monitor.name,
+                rect: monitor.rect,
+                isFocused: focusedWorkspace.workspaceMonitor.rect.topLeftCorner == monitor.rect.topLeftCorner,
+                workspaces: workspaces
+            )
+        }
     }
+
+    private func compareWorkspaces(_ lhs: WorkspacePreview, _ rhs: WorkspacePreview) -> Bool {
+        let lhsRank = workspaceSortRank(lhs.name)
+        let rhsRank = workspaceSortRank(rhs.name)
+        if lhsRank != rhsRank {
+            return lhsRank < rhsRank
+        }
+        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+
+    private func workspaceSortRank(_ name: String) -> Int {
+        let key = name.uppercased()
+        if let index = keyboardOrder.firstIndex(of: key) {
+            return index
+        }
+        return keyboardOrder.count + 1_000
+    }
+
+    private let keyboardOrder: [String] = [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+        "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
+        "A", "S", "D", "F", "G", "H", "J", "K", "L",
+        "Z", "X", "C", "V", "B", "N", "M",
+    ]
 
     // MARK: - Tree snapshot
 
