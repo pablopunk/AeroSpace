@@ -35,10 +35,10 @@ struct NodeView: View {
 
     var body: some View {
         switch node {
-        case .window(let info):
-            WindowTileView(appName: info.appName, isFocused: info.windowId == focusedWindowId && focusedWindowId != nil)
-        case .container(let info):
-            ContainerView(container: info, focusedWindowId: focusedWindowId)
+            case .window(let info):
+                WindowTileView(appName: info.appName, isFocused: info.windowId == focusedWindowId && focusedWindowId != nil)
+            case .container(let info):
+                ContainerView(container: info, focusedWindowId: focusedWindowId)
         }
     }
 }

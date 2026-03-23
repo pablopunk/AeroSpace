@@ -138,7 +138,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
                 hasWindows: hasWindows,
                 tilingTree: tilingTree,
                 floatingWindowCount: workspace.floatingWindows.count,
-                focusedWindowId: isFocused ? focusedWindowId : nil
+                focusedWindowId: isFocused ? focusedWindowId : nil,
             )
         }
 
@@ -156,7 +156,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
                 name: monitor.name,
                 rect: monitor.rect,
                 isFocused: focusedWorkspace.workspaceMonitor.rect.topLeftCorner == monitor.rect.topLeftCorner,
-                workspaces: workspaces
+                workspaces: workspaces,
             )
         }
     }
@@ -175,7 +175,7 @@ final class WorkspacePreviewViewModel: ObservableObject {
         if let index = keyboardOrder.firstIndex(of: key) {
             return index
         }
-        return keyboardOrder.count + 1_000
+        return keyboardOrder.count + 1000
     }
 
     private let keyboardOrder: [String] = [
@@ -192,12 +192,12 @@ final class WorkspacePreviewViewModel: ObservableObject {
             return .container(ContainerInfo(
                 orientation: container.orientation,
                 layout: container.layout,
-                children: container.children.map { snapshotNode($0) }
+                children: container.children.map { snapshotNode($0) },
             ))
         } else if let window = node as? Window {
             return .window(WindowInfo(
                 appName: window.app.name ?? "Window",
-                windowId: window.windowId
+                windowId: window.windowId,
             ))
         } else {
             return .window(WindowInfo(appName: "Unknown", windowId: 0))

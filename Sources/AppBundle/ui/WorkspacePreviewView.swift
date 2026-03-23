@@ -31,7 +31,7 @@ struct WorkspacePreviewView: View {
             }
 
             VStack(alignment: .leading, spacing: rowSpacing) {
-                ForEach(0..<keyboardRows.count, id: \.self) { rowIndex in
+                ForEach(0 ..< keyboardRows.count, id: \.self) { rowIndex in
                     let row = keyboardRows[rowIndex]
                     let rowWorkspaces = row.compactMap(workspaceForKey)
                     if !rowWorkspaces.isEmpty {
@@ -59,12 +59,12 @@ struct WorkspacePreviewView: View {
         .background(
             VisualEffectBlur(
                 material: .hudWindow,
-                blendingMode: .behindWindow
-            )
+                blendingMode: .behindWindow,
+            ),
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(monitor.isFocused ? Color.accentColor.opacity(0.75) : Color.white.opacity(0.08), lineWidth: monitor.isFocused ? 1.5 : 1)
+                .stroke(monitor.isFocused ? Color.accentColor.opacity(0.75) : Color.white.opacity(0.08), lineWidth: monitor.isFocused ? 1.5 : 1),
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -101,7 +101,7 @@ private struct WorkspaceCell: View {
             TilingLayoutView(
                 tilingTree: workspace.tilingTree,
                 floatingWindowCount: workspace.floatingWindowCount,
-                focusedWindowId: workspace.focusedWindowId
+                focusedWindowId: workspace.focusedWindowId,
             )
             .frame(height: 44)
             .cornerRadius(4)
@@ -109,11 +109,11 @@ private struct WorkspaceCell: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(workspace.isFocused ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.1))
+                .fill(workspace.isFocused ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.1)),
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(workspace.isFocused ? Color.accentColor : Color.clear, lineWidth: 1.25)
+                .stroke(workspace.isFocused ? Color.accentColor : Color.clear, lineWidth: 1.25),
         )
         .frame(width: 96, height: 74)
         .contentShape(Rectangle())
