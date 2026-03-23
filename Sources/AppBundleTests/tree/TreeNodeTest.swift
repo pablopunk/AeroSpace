@@ -18,10 +18,9 @@ final class TreeNodeTest: XCTestCase {
         let workspace = Workspace.get(byName: name)
 
         XCTAssertTrue(workspace.isEffectivelyEmpty)
-        weak var window: TestWindow? = .new(id: 1, parent: workspace.rootTilingContainer)
-        XCTAssertNotEqual(window, nil)
+        let window = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
         XCTAssertTrue(!workspace.isEffectivelyEmpty)
-        window!.unbindFromParent()
+        window.unbindFromParent()
         XCTAssertTrue(workspace.isEffectivelyEmpty)
 
         // Don't save to local variable
@@ -31,12 +30,11 @@ final class TreeNodeTest: XCTestCase {
 
     func testNormalizeContainers_dontRemoveRoot() {
         let workspace = Workspace.get(byName: name)
-        weak var root = workspace.rootTilingContainer
+        let root = workspace.rootTilingContainer
         func test() {
-            XCTAssertNotEqual(root, nil)
-            XCTAssertTrue(root!.isEffectivelyEmpty)
+            XCTAssertTrue(root.isEffectivelyEmpty)
             workspace.normalizeContainers()
-            XCTAssertNotEqual(root, nil)
+            XCTAssertTrue(workspace.rootTilingContainer === root)
         }
         test()
 
