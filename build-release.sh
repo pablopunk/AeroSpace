@@ -44,8 +44,8 @@ notarize-release() {
     xcrun stapler staple .release/AeroSpace.app
     xcrun stapler validate .release/AeroSpace.app
 
-    spctl -a -vv .release/AeroSpace.app
-    spctl -a -vv -t exec .release/aerospace
+    /usr/sbin/spctl -a -vv .release/AeroSpace.app
+    /usr/sbin/spctl -a -vv -t exec .release/aerospace
 }
 
 should-notarize-release() {
