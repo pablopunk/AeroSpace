@@ -45,7 +45,7 @@ notarize-release() {
     xcrun stapler validate .release/AeroSpace.app
 
     /usr/sbin/spctl -a -vv .release/AeroSpace.app
-    /usr/sbin/spctl -a -vv -t exec .release/aerospace
+    codesign --check-notarization --verbose=4 .release/aerospace
 }
 
 should-notarize-release() {
