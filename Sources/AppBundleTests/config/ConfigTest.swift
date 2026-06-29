@@ -221,33 +221,33 @@ final class ConfigTest: XCTestCase {
     }
 
     func testParseWindowInsertionPolicy() {
-        let (config, errors) = parseConfig(
+        let result = parseConfig(
             """
             window-insertion-policy = 'bsp'
             bsp-float-after-splits = 4
             """,
         )
-        assertEquals(errors, [])
-        assertEquals(config.windowInsertionPolicy, .bsp)
-        assertEquals(config.bspFloatAfterSplits, 4)
+        assertEquals(result.errors, [])
+        assertEquals(result.config.windowInsertionPolicy, .bsp)
+        assertEquals(result.config.bspFloatAfterSplits, 4)
     }
 
     func testParseWindowInsertionPolicyError() {
-        let (_, errors) = parseConfig(
+        let result = parseConfig(
             """
             window-insertion-policy = 'nope'
             """,
         )
-        assertEquals(errors, ["window-insertion-policy: Can't parse window insertion policy 'nope'"])
+        assertEquals(result.strErrors, ["[ERROR] window-insertion-policy: Can't parse window insertion policy 'nope'"])
     }
 
     func testParseBspFloatAfterSplitsError() {
-        let (_, errors) = parseConfig(
+        let result = parseConfig(
             """
             bsp-float-after-splits = -1
             """,
         )
-        assertEquals(errors, ["bsp-float-after-splits: Must be greater than or equal to 0"])
+        assertEquals(result.strErrors, ["[ERROR] bsp-float-after-splits: Must be greater than or equal to 0"])
     }
 
     func testConfigParseError() {

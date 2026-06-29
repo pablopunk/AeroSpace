@@ -42,7 +42,14 @@ extension Workspace {
 
     @MainActor var shouldIgnoreAdvancedWindowInsertion: Bool {
         let insertionAnchor = focusedTilingWindow ?? mostRecentWindowRecursive
-        return (insertionAnchor?.parent as? TilingContainer)?.layout == .accordion
+        if (insertionAnchor?.parent as? TilingContainer)?.layout == .accordion {
+            return true
+        }
+        // Fallback: if the root container is accordion, we're in accordion mode regardless of anchor state
+        if rootTilingContainer.layout == .accordion {
+            return true
+        }
+        return false
     }
 
     @MainActor func bspInsertionAnchor() -> Window? {

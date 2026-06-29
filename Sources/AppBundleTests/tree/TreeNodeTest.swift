@@ -92,9 +92,9 @@ final class TreeNodeTest: XCTestCase {
             assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
             TestWindow.new(id: 2, parent: $0)
         }
-        let window3 = TestWindow.new(id: 3, parent: workspace)
+        let window3 = TestWindow.new(id: 3, parent: workspace.floatingWindowsContainer)
 
-        try await window3.relayoutWindow(on: workspace, forceTile: true)
+        try await window3.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.rootTilingContainer.layoutDescription,
@@ -107,9 +107,9 @@ final class TreeNodeTest: XCTestCase {
         let workspace = Workspace.get(byName: name)
         let window1 = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
         assertEquals(window1.focusWindow(), true)
-        let window2 = TestWindow.new(id: 2, parent: workspace)
+        let window2 = TestWindow.new(id: 2, parent: workspace.floatingWindowsContainer)
 
-        try await window2.relayoutWindow(on: workspace, forceTile: true)
+        try await window2.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.rootTilingContainer.layoutDescription,
@@ -125,17 +125,17 @@ final class TreeNodeTest: XCTestCase {
             TestWindow.new(id: 1, parent: $0)
             assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
         }
-        let window3 = TestWindow.new(id: 3, parent: workspace)
-        try await window3.relayoutWindow(on: workspace, forceTile: true)
+        let window3 = TestWindow.new(id: 3, parent: workspace.floatingWindowsContainer)
+        try await window3.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(window3.focusWindow(), true)
-        let window4 = TestWindow.new(id: 4, parent: workspace)
+        let window4 = TestWindow.new(id: 4, parent: workspace.floatingWindowsContainer)
 
-        try await window4.relayoutWindow(on: workspace, forceTile: true)
+        try await window4.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.layoutDescription,
-            .workspace([.h_tiles([.window(1), .h_tiles([.window(2), .window(3)])]), .window(4)]),
+            .workspace([.h_tiles([.window(1), .h_tiles([.window(2), .window(3)])]), .floatingWindowsContainer([.window(4)])]),
         )
     }
 
@@ -148,23 +148,23 @@ final class TreeNodeTest: XCTestCase {
             window1 = TestWindow.new(id: 1, parent: $0)
             assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
         }
-        let window3 = TestWindow.new(id: 3, parent: workspace)
+        let window3 = TestWindow.new(id: 3, parent: workspace.floatingWindowsContainer)
 
-        try await window3.relayoutWindow(on: workspace, forceTile: true)
+        try await window3.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(window3.focusWindow(), true)
-        let window4 = TestWindow.new(id: 4, parent: workspace)
+        let window4 = TestWindow.new(id: 4, parent: workspace.floatingWindowsContainer)
 
-        try await window4.relayoutWindow(on: workspace, forceTile: true)
+        try await window4.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(window1.focusWindow(), true)
-        let window5 = TestWindow.new(id: 5, parent: workspace)
+        let window5 = TestWindow.new(id: 5, parent: workspace.floatingWindowsContainer)
 
-        try await window5.relayoutWindow(on: workspace, forceTile: true)
+        try await window5.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.layoutDescription,
-            .workspace([.h_tiles([.h_tiles([.window(1), .window(5)]), .h_tiles([.window(2), .window(3)])]), .window(4)]),
+            .workspace([.h_tiles([.h_tiles([.window(1), .window(5)]), .h_tiles([.window(2), .window(3)])]), .floatingWindowsContainer([.window(4)])]),
         )
     }
 
@@ -176,9 +176,9 @@ final class TreeNodeTest: XCTestCase {
             assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
             TestWindow.new(id: 2, parent: $0)
         }
-        let window3 = TestWindow.new(id: 3, parent: workspace)
+        let window3 = TestWindow.new(id: 3, parent: workspace.floatingWindowsContainer)
 
-        try await window3.relayoutWindow(on: workspace, forceTile: true)
+        try await window3.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.rootTilingContainer.layoutDescription,
@@ -195,9 +195,9 @@ final class TreeNodeTest: XCTestCase {
             TestWindow.new(id: 1, parent: $0)
             TestWindow.new(id: 2, parent: $0)
         }
-        let window3 = TestWindow.new(id: 3, parent: workspace)
+        let window3 = TestWindow.new(id: 3, parent: workspace.floatingWindowsContainer)
 
-        try await window3.relayoutWindow(on: workspace, forceTile: true)
+        try await window3.relayoutWindow(on: workspace, .cancellable, forceTile: true)
 
         assertEquals(
             workspace.rootTilingContainer.layoutDescription,
