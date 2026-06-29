@@ -1,7 +1,10 @@
 # frozen_string_literal: true
-ruby '~> 3.0' # >= 3.0 and < 4.0
+ruby '>= 3.0'
 
 source "https://rubygems.org"
+
+# logger was removed from default gems in Ruby 4.0
+gem 'logger'
 
 # https://github.com/asciidoctor/asciidoctor/releases
 gem 'asciidoctor', '2.0.23'
