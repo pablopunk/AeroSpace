@@ -64,6 +64,10 @@ Both configs in action:
 
 https://github.com/user-attachments/assets/d53b9ad2-c1e0-444d-888b-23bd2c970066
 
+### 🆕✨ Focus navigation follows keyboard layout on single monitor
+
+On a single display, pressing focus-left/right/up/down at the monitor edge jumps to the adjacent workspace on the keyboard grid (same layout as the workspace preview HUD). No extra config needed.
+
 ## ⚠️ END OF FEATURES OF THIS FORK ⚠️
 
 # AeroSpace Beta [![Build](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/nikitabobko/AeroSpace/actions/workflows/build.yml)
