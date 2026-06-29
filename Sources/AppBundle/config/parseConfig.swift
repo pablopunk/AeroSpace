@@ -158,6 +158,15 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 
+    // Fork: BSP window insertion policy
+    "window-insertion-policy": Parser(\.windowInsertionPolicy, parseWindowInsertionPolicy),
+    "bsp-float-after-splits": Parser(\.bspFloatAfterSplits, parseNonNegativeInt),
+
+    // Fork: Workspace preview HUD
+    "workspace-preview-enabled": Parser(\.workspacePreviewModifiers, parseWorkspacePreviewModifiers),
+    "workspace-preview-show-empty": Parser(\.workspacePreviewShowEmpty, parseBool),
+    "workspace-preview-after-workspace-switch": Parser(\.workspacePreviewAfterWorkspaceSwitch, parseBool),
+
     // Deprecated
     "non-empty-workspaces-root-containers-layout-on-startup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
     "indent-for-nested-containers-with-the-same-orientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
@@ -415,6 +424,35 @@ private func parseDefaultContainerOrientation(_ raw: OrderedJson, _ backtrace: C
     parseString(raw, backtrace).flatMap {
         DefaultContainerOrientation(rawValue: $0)
             .toResult(.init(backtrace, "Can't parse default container orientation '\($0)'"))
+    }
+}
+
+private func parseWindowInsertionPolicy(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<WindowInsertionPolicy> {
+    parseString(raw, backtrace).flatMap {
+        WindowInsertionPolicy(rawValue: $0)
+            .toResult(.init(backtrace, "Can't parse window insertion policy '\($0)'"))
+    }
+}
+
+private func parseNonNegativeInt(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {
+    parseInt(raw, backtrace)
+        .filter(.init(backtrace, "Must be greater than or equal to 0")) { $0 >= 0 }
+}
+
+private func parseWorkspacePreviewModifiers(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<NSEvent.ModifierFlags?> {
+    parseString(raw, backtrace).map { modifiersStr in
+        let parts = modifiersStr.split(separator: "-")
+        var flags: NSEvent.ModifierFlags = []
+        for part in parts {
+            switch part {
+                case "alt": flags.insert(.option)
+                case "cmd": flags.insert(.command)
+                case "ctrl": flags.insert(.control)
+                case "shift": flags.insert(.shift)
+                default: return nil
+            }
+        }
+        return flags.isEmpty ? nil : flags
     }
 }
 
