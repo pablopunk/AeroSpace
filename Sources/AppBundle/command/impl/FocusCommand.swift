@@ -95,6 +95,15 @@ struct FocusCommand: Command {
     _ direction: CardinalDirection,
     _ wrappedMonitor: Monitor,
 ) -> Bool {
+    // On a single-monitor setup, monitor boundaries don't make sense — there's nowhere to go.
+    // Instead, navigate to the workspace in the given direction based on the keyboard layout
+    // (matching the workspace overlay). This applies regardless of boundariesAction since
+    // the notion of "next monitor" is meaningless with only one display.
+    if sortedMonitors.count == 1,
+       let targetWorkspace = findWorkspace(inDirection: direction, from: target.workspace)
+    {
+        return targetWorkspace.focusWorkspace()
+    }
     switch args.boundariesAction {
         case .stop:
             return true
@@ -106,6 +115,46 @@ struct FocusCommand: Command {
             wrappedMonitor.activeWorkspace.findLeafWindowRecursive(snappedTo: direction.opposite)?.markAsMostRecentChild()
             return wrappedMonitor.activeWorkspace.focusWorkspace()
     }
+}
+
+/// Keyboard-based workspace navigation grid, matching the workspace overlay layout.
+private let workspaceKeyboardGrid: [[String]] = [
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+    ["Z", "X", "C", "V", "B", "N", "M"],
+]
+
+/// Find the workspace adjacent to the given workspace in the keyboard grid, in the given direction.
+/// Returns nil if the workspace name is not on the grid or no adjacent workspace exists.
+@MainActor
+private func findWorkspace(inDirection direction: CardinalDirection, from workspace: Workspace) -> Workspace? {
+    let upperName = workspace.name.uppercased()
+    guard let (row, col) = findKeyPosition(upperName) else { return nil }
+    let (newRow, newCol): (Int, Int) = switch direction {
+        case .left: (row, col - 1)
+        case .right: (row, col + 1)
+        case .up: (row - 1, col)
+        case .down: (row + 1, col)
+    }
+    guard let targetKey = workspaceKeyboardGrid.getOrNil(atIndex: newRow)?.getOrNil(atIndex: newCol) else {
+        return nil
+    }
+    // Match case-insensitively to match the workspace overlay behavior.
+    // If no existing workspace matches, create one with the canonical uppercase key.
+    let targetWorkspace = Workspace.all.first { $0.name.uppercased() == targetKey }
+        ?? Workspace.get(byName: targetKey)
+    guard targetWorkspace !== workspace else { return nil }
+    return targetWorkspace
+}
+
+private func findKeyPosition(_ key: String) -> (row: Int, col: Int)? {
+    for (rowIndex, row) in workspaceKeyboardGrid.enumerated() {
+        if let colIndex = row.firstIndex(of: key) {
+            return (rowIndex, colIndex)
+        }
+    }
+    return nil
 }
 
 @MainActor private func wrapAroundTheWorkspace(_ target: LiveFocus, _ io: CmdIo, _ direction: CardinalDirection) -> Bool {

@@ -212,6 +212,108 @@ final class FocusCommandTest: XCTestCase {
         assertEquals(focus.windowOrNil?.windowId, 1)
     }
 
+    func testFocusKeyboardGridLeftRight() async throws {
+        // Set up workspaces on the keyboard grid
+        let workspaceF = Workspace.get(byName: "F")
+        let workspaceG = Workspace.get(byName: "G")
+
+        // Add a window to workspace F and focus it
+        workspaceF.rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0)
+        }
+        _ = workspaceF.focusWorkspace()
+        assertEquals(focus.workspace.name, "F")
+
+        // Navigate right: F -> G (G is to the right of F on the keyboard)
+        var args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.right))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "G")
+
+        // Navigate left: G -> F (F is to the left of G)
+        args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.left))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "F")
+    }
+
+    func testFocusKeyboardGridUpDown() async throws {
+        let workspaceF = Workspace.get(byName: "F")
+        let workspaceR = Workspace.get(byName: "R")
+
+        workspaceF.rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0)
+        }
+        _ = workspaceF.focusWorkspace()
+
+        // Navigate up: F -> R (R is above F on the keyboard)
+        var args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.up))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "R")
+
+        // Navigate down: R -> F (F is below R)
+        args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.down))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "F")
+    }
+
+    func testFocusKeyboardGridCaseInsensitive() async throws {
+        // Workspace created with lowercase name, grid key is uppercase "F"
+        let workspaceF = Workspace.get(byName: "f")
+        let workspaceG = Workspace.get(byName: "G")
+
+        workspaceF.rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0)
+        }
+        _ = workspaceF.focusWorkspace()
+        assertEquals(focus.workspace.name, "f")
+
+        // Should still navigate from lowercase "f" to "G"
+        var args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.right))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "G")
+    }
+
+    func testFocusKeyboardGridBoundaryNoop() async throws {
+        // "1" is at the left edge of the keyboard grid
+        let workspace1 = Workspace.get(byName: "1")
+        workspace1.rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0)
+        }
+        _ = workspace1.focusWorkspace()
+
+        // Navigating left from "1" should not change workspace (no wrap within grid)
+        var args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.left))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.workspace.name, "1")
+    }
+
+    func testFocusKeyboardGridNonGridNameFallback() async throws {
+        // A workspace whose name is not on the keyboard grid should fall back to existing behavior
+        let ws = Workspace.get(byName: "MyWorkspace")
+        ws.rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0)
+        }
+        _ = ws.focusWorkspace()
+
+        var args = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.right))
+        args.rawBoundaries = .allMonitorsOuterFrame
+        args.rawBoundariesAction = .wrapAroundAllMonitors
+        try await FocusCommand(args: args).run(.defaultEnv, .emptyStdin)
+        // Should stay on the same workspace (non-grid name, fallback to monitor wrap which is same monitor)
+        assertEquals(focus.workspace.name, "MyWorkspace")
+    }
+
     func testFocusDfsRelativeWrapping() async throws {
         Workspace.get(byName: name).rootTilingContainer.apply {
             assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
