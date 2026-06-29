@@ -85,7 +85,6 @@ enum ConfigVersion: Int, Comparable, CaseIterable, Sendable, CustomStringConvert
 
     var description: String { rawValue.description }
 }
-}
 
 enum DefaultContainerOrientation: String {
     case horizontal, vertical, auto
