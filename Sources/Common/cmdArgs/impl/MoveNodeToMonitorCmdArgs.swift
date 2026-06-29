@@ -3,17 +3,19 @@ public struct MoveNodeToMonitorCmdArgs: CmdArgs {
     fileprivate init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .moveNodeToMonitor,
-        allowInConfig: true,
         help: move_node_to_monitor_help_generated,
         flags: [
             // "Own" option
             "--wrap-around": trueBoolFlag(\.wrapAround),
 
-            "--window-id": optionalWindowIdFlag(),
+            "--window-id": windowIdSubArgParser(),
             "--focus-follows-window": trueBoolFlag(\.focusFollowsWindow),
             "--fail-if-noop": trueBoolFlag(\.failIfNoop),
         ],
-        posArgs: [newMandatoryPosArgParser(\.target, parseTarget, placeholder: MonitorTarget.cases.joinedCliArgs)],
+        posArgs: [
+            dashDashArg(mandatory: false),
+            newMandatoryPosArgParser(\.target, parseMonitorTarget, placeholder: MonitorTarget.cases.joinedCliArgs),
+        ],
     )
 
     public init(target: MonitorTarget) {

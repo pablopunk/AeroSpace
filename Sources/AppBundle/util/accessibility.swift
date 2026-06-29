@@ -3,11 +3,21 @@ import Common
 import PrivateApi
 
 @MainActor
-func checkAccessibilityPermissions() {
+func waitForAccessibilityPermission_nonCancellable() async {
     let options = [axTrustedCheckOptionPrompt: true]
-    if !AXIsProcessTrustedWithOptions(options as CFDictionary) {
-        resetAccessibility() // Because macOS doesn't reset it for us when the app signature changes...
-        terminateApp()
+    while true {
+        let status = TrayMenuModel.shared.axPermissionStatus == .waitingWithPrompt
+            ? AXIsProcessTrustedWithOptions(options as CFDictionary)
+            : AXIsProcessTrusted()
+        if status {
+            TrayMenuModel.shared.axPermissionStatus = .granted
+            break
+        }
+        if TrayMenuModel.shared.axPermissionStatus == .waitingWithPrompt {
+            resetAccessibility() // Because macOS doesn't reset it for us when the app signature changes...
+        }
+        TrayMenuModel.shared.axPermissionStatus = .waiting
+        try? await Task.sleep(for: .seconds(1))
     }
 }
 
@@ -235,24 +245,24 @@ enum Ax {
         key: kAXSizeAttribute,
         getter: {
             var raw: CGSize = .zero
-            check(AXValueGetValue($0 as! AXValue, .cgSize, &raw))
+            check(unsafe AXValueGetValue($0 as! AXValue, .cgSize, &raw))
             return raw
         },
         setter: {
             var size = $0
-            return AXValueCreate(.cgSize, &size) as CFTypeRef
+            return unsafe AXValueCreate(.cgSize, &size) as CFTypeRef
         },
     )
     static let topLeftCornerAttr = WritableAttrImpl<CGPoint>(
         key: kAXPositionAttribute,
         getter: {
             var raw: CGPoint = .zero
-            AXValueGetValue($0 as! AXValue, .cgPoint, &raw)
+            check(unsafe AXValueGetValue($0 as! AXValue, .cgPoint, &raw))
             return raw
         },
         setter: {
             var size = $0
-            return AXValueCreate(.cgPoint, &size) as CFTypeRef
+            return unsafe AXValueCreate(.cgPoint, &size) as CFTypeRef
         },
     )
     /// Returns windows visible on all monitors
@@ -321,11 +331,9 @@ private func windowOrNil(_ any: Any?) -> WindowIdAndAxUiElementMock? {
     guard let any else { return nil }
     let potentialWindow = castToAxUiElementMock(any as AnyObject)
     // Filter out non-window objects (e.g. Finder's desktop)
-    let windowId = potentialWindow.containingWindowId()
-    if let windowId {
-        return (windowId, potentialWindow)
-    } else {
-        return nil
+    return switch potentialWindow.containingWindowId() {
+        case let windowId?: (windowId, potentialWindow)
+        case nil: nil
     }
 }
 
@@ -334,7 +342,7 @@ extension AXUIElement: AxUiElementMock {
         let state = signposter.beginInterval(#function, "attr: \(attr.key) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
         defer { signposter.endInterval(#function, state) }
         var raw: AnyObject?
-        return AXUIElementCopyAttributeValue(self, attr.key as CFString, &raw) == .success
+        return unsafe AXUIElementCopyAttributeValue(self, attr.key as CFString, &raw) == .success
             ? raw.flatMap(attr.getter)
             : nil
     }
@@ -351,13 +359,13 @@ extension AXUIElement: AxUiElementMock {
         let state = signposter.beginInterval(#function, "axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
         defer { signposter.endInterval(#function, state) }
         var cgWindowId = CGWindowID()
-        return _AXUIElementGetWindow(self, &cgWindowId) == .success ? cgWindowId : nil
+        return unsafe _AXUIElementGetWindow(self, &cgWindowId) == .success ? cgWindowId : nil
     }
 }
 
 extension AXObserver {
     static func new(_ pid: pid_t, _ handler: AXObserverCallback) -> AXObserver? {
         var observer: AXObserver? = nil
-        return AXObserverCreate(pid, handler, &observer) == .success ? observer : nil
+        return unsafe AXObserverCreate(pid, handler, &observer) == .success ? observer : nil
     }
 }

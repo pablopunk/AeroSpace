@@ -12,25 +12,26 @@ actor AwaitableOneTimeBroadcastLatch {
         let id = UniqueToken()
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<(), any Error>) in
-                if let awaiter = awaiters.removeValue(forKey: id) {
-                    check(awaiter.isNull)
-                    cont.resume(throwing: CancellationError())
-                } else if done {
-                    cont.resume()
-                } else {
-                    awaiters[id] = .just(cont)
+                switch awaiters.removeValue(forKey: id) {
+                    case let awaiter?:
+                        check(awaiter.isNull)
+                        cont.resume(throwing: CancellationError())
+                    case nil where done: cont.resume()
+                    case nil: awaiters[id] = .just(cont)
                 }
             }
         } onCancel: {
-            Task { await cancel(id: id) }
+            Task.startUnstructured { await self.cancel(id: id) }
         }
     }
 
     private func cancel(id: UniqueToken) {
-        if let awaiter = awaiters.removeValue(forKey: id) {
-            awaiter.valueOrNil.orDie().resume(throwing: CancellationError())
-        } else if !done {
-            awaiters[id] = .null // Indicate to 'await' that the client should be cancelled right away when it suspends
+        switch awaiters.removeValue(forKey: id) {
+            case let awaiter?: awaiter.valueOrNil.orDie().resume(throwing: CancellationError())
+            case nil where !done:
+                // Indicate to 'await' that the client should be cancelled right away when it suspends
+                awaiters[id] = .null
+            case nil: break
         }
     }
 

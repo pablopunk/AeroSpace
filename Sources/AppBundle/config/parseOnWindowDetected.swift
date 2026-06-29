@@ -1,33 +1,35 @@
 import Common
 
-struct WindowDetectedCallback: ConvenienceCopyable, Equatable {
-    var matcher: WindowDetectedCallbackMatcher = WindowDetectedCallbackMatcher()
+struct WindowDetectedCallback: ConvenienceMutable, Equatable {
+    var matcher: WindowDetectedCallbackMatcher = .command(.empty)
     var checkFurtherCallbacks: Bool = false
-    var rawRun: [any Command]? = nil
+    var rawRun: Shell<any Command>? = nil
 
-    var run: [any Command] {
+    var run: Shell<any Command> {
         rawRun ?? dieT("ID-46D063B2 should have discarded nil")
     }
 
     var debugJson: Json {
         var result: [String: Json] = [:]
-        result["matcher"] = matcher.debugJson
+        result["matcher"] = switch matcher {
+            case .command(let command): .string(command.shellOfCommandsDescription)
+            case .legacy(let legacy): legacy.debugJson
+        }
         if let commands = rawRun {
-            result["commands"] = .string(commands.prettyDescription)
+            result["commands"] = .string(commands.shellOfCommandsDescription)
         }
         return .dict(result)
     }
 
     static func == (lhs: WindowDetectedCallback, rhs: WindowDetectedCallback) -> Bool {
-        return lhs.matcher == rhs.matcher && lhs.checkFurtherCallbacks == rhs.checkFurtherCallbacks &&
-            zip(lhs.run, rhs.run).allSatisfy { $0.equals($1) }
+        lhs.matcher == rhs.matcher && lhs.checkFurtherCallbacks == rhs.checkFurtherCallbacks && lhs.run.strictEquals(rhs.run)
     }
 }
 
-struct WindowDetectedCallbackMatcher: ConvenienceCopyable, Equatable {
+struct LegacyWindowDetectedCallbackMatcher: ConvenienceMutable, Equatable {
     var appId: String?
-    var appNameRegexSubstring: Regex<AnyRegexOutput>?
-    var windowTitleRegexSubstring: Regex<AnyRegexOutput>?
+    var appNameRegexSubstring: CaseInsensitiveRegex?
+    var windowTitleRegexSubstring: CaseInsensitiveRegex?
     var workspace: String?
     var duringAeroSpaceStartup: Bool?
 
@@ -36,11 +38,11 @@ struct WindowDetectedCallbackMatcher: ConvenienceCopyable, Equatable {
         if let appId {
             resultParts.append("appId=\"\(appId)\"")
         }
-        if appNameRegexSubstring != nil {
-            resultParts.append("appNameRegexSubstrin=Regex")
+        if let appNameRegexSubstring {
+            resultParts.append("appNameRegexSubstring=\"\(appNameRegexSubstring.origin)\"")
         }
-        if windowTitleRegexSubstring != nil {
-            resultParts.append("windowTitleRegexSubstring=Regex")
+        if let windowTitleRegexSubstring {
+            resultParts.append("windowTitleRegexSubstring=\"\(windowTitleRegexSubstring.origin)\"")
         }
         if let workspace {
             resultParts.append("workspace=\"\(workspace)\"")
@@ -50,25 +52,28 @@ struct WindowDetectedCallbackMatcher: ConvenienceCopyable, Equatable {
         }
         return .string(resultParts.joined(separator: ", "))
     }
+}
+
+enum WindowDetectedCallbackMatcher: Equatable {
+    case command(Shell<any Command>)
+    case legacy(LegacyWindowDetectedCallbackMatcher)
 
     static func == (lhs: WindowDetectedCallbackMatcher, rhs: WindowDetectedCallbackMatcher) -> Bool {
-        check(
-            lhs.appNameRegexSubstring == nil &&
-                lhs.windowTitleRegexSubstring == nil &&
-                rhs.appNameRegexSubstring == nil &&
-                rhs.windowTitleRegexSubstring == nil,
-        )
-        return lhs.appId == rhs.appId
+        switch (lhs, rhs) {
+            case (.command(let command1), .command(let command2)): command1.strictEquals(command2)
+            case (.legacy(let matcher1), .legacy(let matcher2)): matcher1 == matcher2
+            default: false
+        }
     }
 }
 
 private let windowDetectedParser: [String: any ParserProtocol<WindowDetectedCallback>] = [
     "if": Parser(\.matcher, parseMatcher),
     "check-further-callbacks": Parser(\.checkFurtherCallbacks, parseBool),
-    "run": Parser(\.rawRun, upcast { parseCommandOrCommands($0).toParsedConfig($1) }),
+    "run": Parser(\.rawRun, parseShellOfCommandsForConfig),
 ]
 
-private let matcherParsers: [String: any ParserProtocol<WindowDetectedCallbackMatcher>] = [
+private let matcherParsers: [String: any ParserProtocol<LegacyWindowDetectedCallbackMatcher>] = [
     "app-id": Parser(\.appId, upcast(parseString)),
     "workspace": Parser(\.workspace, upcast(parseString)),
     "app-name-regex-substring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
@@ -76,37 +81,55 @@ private let matcherParsers: [String: any ParserProtocol<WindowDetectedCallbackMa
     "during-aerospace-startup": Parser(\.duringAeroSpaceStartup, upcast(parseBool)),
 ]
 
-private func upcast<T>(_ fun: @escaping @Sendable (Json, ConfigBacktrace) -> ParsedConfig<T>) -> @Sendable (Json, ConfigBacktrace) -> ParsedConfig<T?> {
-    { fun($0, $1).map { $0 } }
+private func upcast<T>(
+    _ fun: @escaping @Sendable (OrderedJson, ConfigBacktrace) -> ResOrConfigParseDiagnostic<T>,
+) -> @Sendable (OrderedJson, ConfigBacktrace) -> ResOrConfigParseDiagnostic<T?> {
+    { fun($0, $1).map(Optional.init) }
 }
 
-func parseOnWindowDetectedArray(_ raw: Json, _ backtrace: ConfigBacktrace, _ errors: inout [ConfigParseError]) -> [WindowDetectedCallback] {
+func parseOnWindowDetectedArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [WindowDetectedCallback] {
     if let array = raw.asArrayOrNil {
-        return array.enumerated().map { (index, raw) in parseWindowDetectedCallback(raw, backtrace + .index(index), &errors) }.filterNotNil()
+        return array.enumerated().map { (index, raw) in parseWindowDetectedCallback(raw, backtrace + .index(index), &c) }.filterNotNil()
     } else {
-        errors += [expectedActualTypeError(expected: .array, actual: raw.tomlType, backtrace)]
+        c.errors += [expectedActualTypeDiagnostic(expected: .array, actual: raw.tomlType, backtrace)]
         return []
     }
 }
 
-private func parseCasInsensitiveRegex(_ raw: Json, _ backtrace: ConfigBacktrace) -> ParsedConfig<Regex<AnyRegexOutput>> {
-    parseString(raw, backtrace).flatMap { parseCaseInsensitiveRegex($0).toParsedConfig(backtrace) }
+private func parseCasInsensitiveRegex(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<CaseInsensitiveRegex> {
+    parseString(raw, backtrace).flatMap { CaseInsensitiveRegex.new($0).toParsedConfig(backtrace) }
 }
 
-private func parseMatcher(_ raw: Json, _ backtrace: ConfigBacktrace, _ errors: inout [ConfigParseError]) -> WindowDetectedCallbackMatcher {
-    parseTable(raw, WindowDetectedCallbackMatcher(), matcherParsers, backtrace, &errors)
+private func parseMatcher(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> WindowDetectedCallbackMatcher {
+    switch raw {
+        case .dict(let raw):
+            return .legacy(raw.parseTable(LegacyWindowDetectedCallbackMatcher(), matcherParsers, backtrace, &c))
+        case .string(let raw):
+            return .command(parseCommand(raw, allowExecAndForget: false, allowEval: false).toResult().toParsedConfig(backtrace).getOrNil(appendErrorTo: &c.errors) ?? .empty)
+        default:
+            // Intentionally skip Table type from the list of expected types
+            c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: raw.tomlType)))
+            return .command(.empty)
+    }
 }
 
-private func parseWindowDetectedCallback(_ raw: Json, _ backtrace: ConfigBacktrace, _ errors: inout [ConfigParseError]) -> WindowDetectedCallback? {
-    var myErrors: [ConfigParseError] = []
-    let callback = parseTable(raw, WindowDetectedCallback(), windowDetectedParser, backtrace, &myErrors)
+private func parseWindowDetectedCallback(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> WindowDetectedCallback? {
+    var myContext = ConfigParserContext(configVersion: c.configVersion, errors: [], warnings: [])
+    let callback = parseTable(raw, WindowDetectedCallback(), windowDetectedParser, backtrace, &myContext)
 
-    if callback.rawRun == nil { // ID-46D063B2
-        myErrors.append(.semantic(backtrace, "'run' is mandatory key"))
+    if callback.matcher == .command(.empty) && !callback.checkFurtherCallbacks {
+        let msg = "Omitting 'if' is error prone. You can use `if = 'true'` to preserve the previous behavior.\n" +
+            "But heads up! You may have missed 'check-further-callbacks = true'"
+        myContext.errors.append(.init(backtrace, msg))
     }
 
-    if !myErrors.isEmpty {
-        errors += myErrors
+    if callback.rawRun == nil { // ID-46D063B2
+        myContext.errors.append(.init(backtrace, "'run' is mandatory key"))
+    }
+
+    if !myContext.errors.isEmpty {
+        c.errors += myContext.errors
+        c.warnings += myContext.warnings
         return nil
     }
 

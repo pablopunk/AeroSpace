@@ -5,35 +5,40 @@ import Common
 private var activeRefreshTask: Task<(), any Error>? = nil
 
 @MainActor
-func scheduleRefreshSession(
+func scheduleCancellableCompleteRefreshSession(
     _ event: RefreshSessionEvent,
     optimisticallyPreLayoutWorkspaces: Bool = false,
 ) {
     activeRefreshTask?.cancel()
-    activeRefreshTask = Task { @MainActor in
+    activeRefreshTask = Task.startUnstructured { @MainActor in
         try checkCancellation()
-        try await runRefreshSessionBlocking(event, optimisticallyPreLayoutWorkspaces: optimisticallyPreLayoutWorkspaces)
+        await runHeavyCompleteRefreshSession(
+            event,
+            assumeCancellable: true,
+            optimisticallyPreLayoutWorkspaces: optimisticallyPreLayoutWorkspaces,
+        )
     }
 }
 
 @MainActor
-func runRefreshSessionBlocking(
+func runHeavyCompleteRefreshSession(
     _ event: RefreshSessionEvent,
+    assumeCancellable: Bool,
     layoutWorkspaces shouldLayoutWorkspaces: Bool = true,
     optimisticallyPreLayoutWorkspaces: Bool = false,
-) async throws {
+) async {
     let state = signposter.beginInterval(#function, "event: \(event) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
     defer { signposter.endInterval(#function, state) }
     if !TrayMenuModel.shared.isEnabled { return }
-    try await $refreshSessionEvent.withValue(event) {
-        try await $_isStartup.withValue(event.isStartup) {
-            let nativeFocused = try await getNativeFocusedWindow()
-            if let nativeFocused { try await debugWindowsIfRecording(nativeFocused) }
+    let res = await Result {
+        try await $refreshSessionEvent.withValue(event) {
+            let nativeFocused = try await getNativeFocusedWindow(.cancellable)
+            if let nativeFocused { try await debugWindowsIfRecording(nativeFocused, .cancellable) }
             updateFocusCache(nativeFocused)
 
             if shouldLayoutWorkspaces && optimisticallyPreLayoutWorkspaces { try await layoutWorkspaces() }
 
-            refreshModel()
+            await refreshModel_nonCancellable()
             try await refresh()
             gcMonitors()
 
@@ -42,6 +47,11 @@ func runRefreshSessionBlocking(
             try await normalizeLayoutReason()
             if shouldLayoutWorkspaces { try await layoutWorkspaces() }
         }
+    }
+    switch res {
+        case .success(()): break
+        case .failure(let err as CancellationError): check(assumeCancellable, "Non cancellable refresh session was canceled: \(err) (\(type(of: err)))")
+        case .failure(let err): die("Illegal error: \(err)")
     }
 }
 
@@ -56,27 +66,25 @@ func runLightSession<T>(
     activeRefreshTask?.cancel() // Give priority to runSession
     activeRefreshTask = nil
     return try await $refreshSessionEvent.withValue(event) {
-        try await $_isStartup.withValue(event.isStartup) {
-            let nativeFocused = try await getNativeFocusedWindow()
-            if let nativeFocused { try await debugWindowsIfRecording(nativeFocused) }
-            updateFocusCache(nativeFocused)
-            let focusBefore = focus.windowOrNil
+        let nativeFocused = try await getNativeFocusedWindow(.cancellable)
+        if let nativeFocused { try await debugWindowsIfRecording(nativeFocused, .cancellable) }
+        updateFocusCache(nativeFocused)
+        let focusBefore = focus.windowOrNil
 
-            refreshModel()
-            let result = try await body()
-            refreshModel()
+        await refreshModel_nonCancellable()
+        let result = try await body()
+        await refreshModel_nonCancellable()
 
-            let focusAfter = focus.windowOrNil
+        let focusAfter = focus.windowOrNil
 
-            updateTrayText()
-            SecureInputPanel.shared.refresh()
-            try await layoutWorkspaces()
-            if focusBefore != focusAfter {
-                focusAfter?.nativeFocus() // syncFocusToMacOs
-            }
-            scheduleRefreshSession(event)
-            return result
+        updateTrayText()
+        SecureInputPanel.shared.refresh()
+        if !event.isFocusFollowsMouse { try await layoutWorkspaces() }
+        if focusBefore != focusAfter {
+            focusAfter?.nativeFocus() // syncFocusToMacOs
         }
+        if !event.isFocusFollowsMouse { scheduleCancellableCompleteRefreshSession(event) }
+        return result
     }
 }
 
@@ -101,17 +109,21 @@ struct RunSessionGuard: Sendable {
 }
 
 @MainActor
-func refreshModel() {
-    Workspace.garbageCollectUnusedWorkspaces()
-    checkOnFocusChangedCallbacks()
-    normalizeContainers()
+func refreshModel_nonCancellable() async {
+    if refreshSessionEvent?.isFocusFollowsMouse == true {
+        await checkOnFocusChangedCallbacks_nonCancellable()
+    } else {
+        Workspace.garbageCollectUnusedWorkspaces()
+        await checkOnFocusChangedCallbacks_nonCancellable()
+        normalizeContainers()
+    }
 }
 
 @MainActor
 private func refresh() async throws {
     // Garbage collect terminated apps and windows before working with all windows
     let mapping = try await MacApp.refreshAllAndGetAliveWindowIds(frontmostAppBundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
-    let aliveWindowIds = mapping.values.flatMap { $0 }.toSet()
+    let aliveWindowIds = mapping.values.flatMap(id).toSet()
 
     for window in MacWindow.allWindows {
         if !aliveWindowIds.contains(window.windowId) {
@@ -130,9 +142,9 @@ private func refresh() async throws {
 
 func refreshObs(_: AXObserver, _: AXUIElement, notif: CFString, _: UnsafeMutableRawPointer?) {
     let notif = notif as String
-    Task { @MainActor in
+    Task.startUnstructured { @MainActor in
         if !TrayMenuModel.shared.isEnabled { return }
-        scheduleRefreshSession(.ax(notif))
+        scheduleCancellableCompleteRefreshSession(.ax(notif))
     }
 }
 

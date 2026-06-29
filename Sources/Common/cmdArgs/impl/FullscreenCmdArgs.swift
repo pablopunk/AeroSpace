@@ -3,12 +3,11 @@ public struct FullscreenCmdArgs: CmdArgs {
     fileprivate init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .fullscreen,
-        allowInConfig: true,
         help: fullscreen_help_generated,
         flags: [
             "--no-outer-gaps": trueBoolFlag(\.noOuterGaps),
             "--fail-if-noop": trueBoolFlag(\.failIfNoop),
-            "--window-id": optionalWindowIdFlag(),
+            "--window-id": windowIdSubArgParser(),
         ],
         posArgs: [ArgParser(\.toggle, parseToggleEnum)],
     )

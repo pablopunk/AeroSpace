@@ -1,6 +1,13 @@
-public typealias Parsed<T> = Result<T, String>
-extension String: @retroactive Error {} // Make it possible to use String in Result. todo migrate to self written Result monad
-extension Array: @retroactive Error where Element: Error {} // Make it possible to use [String] in Result. todo migrate to self written Result monad
+import Foundation
+
+public typealias ResOrStr<T> = Result<T, String>
+extension String: @retroactive LocalizedError { // Make it possible to use String in Result. todo migrate to self written Result monad
+    public var errorDescription: String? { self }
+}
+
+// Make it possible to use [String] in Result. todo migrate to self written Result monad
+extension Array: @retroactive Error where Element: Error {}
+extension Array: @retroactive LocalizedError where Element: LocalizedError {}
 
 extension String {
     public func trim() -> String {
@@ -11,7 +18,6 @@ extension String {
         split(separator: "\n", omittingEmptySubsequences: false).map { with + $0 }.joined(separator: "\n")
     }
 
-    public func quoted(with char: String) -> String { char + self + char }
     public var singleQuoted: String { "'" + self + "'" }
     public var doubleQuoted: String { "\"" + self + "\"" }
 }
@@ -70,75 +76,88 @@ extension [[String]] {
 
 extension String {
     public func interpolate(with variables: [String: String]) -> Result<String, [String]> {
-        interpolationTokens(interpolationChar: "$")
+        rawInterpolationTokens(interpolationChar: "$")
             .mapError { [$0] }
             .flatMap { tokens in
                 tokens.mapAllOrFailures { token in
                     switch token {
                         case .literal(let literal): .success(literal)
                         case .interVar(let value):
-                            variables[value].flatMap(Result.success)
-                                ?? .failure("Env variable '\(value)' isn't presented in AeroSpace.app env vars, " +
-                                    "or not available for interpolation (because it's mutated)")
+                            variables[value].toResult("Env variable '\(value)' isn't presented in AeroSpace.app env vars, "
+                                + "or not available for interpolation (because it's mutated)")
                     }
                 }
             }
             .map { $0.joined(separator: "") }
     }
 
-    public func interpolationTokens(interpolationChar: Character) -> Result<[StringInterToken], String> {
-        var mode: InterpolationParserState = .stringLiteral
-        var result: [StringInterToken] = []
-        var literal: String = ""
+    public func interpolationTokens<T>(
+        interpolationChar: Character,
+        ofInterVarType type: T.Type,
+    ) -> Result<[InterToken<T>], String> where T: Sendable, T: Equatable, T: CaseIterable, T: RawRepresentable, T.RawValue == String {
+        rawInterpolationTokens(interpolationChar: interpolationChar).flatMap { rawTokens in
+            var result: [InterToken<T>] = []
+            for token in rawTokens {
+                switch token {
+                    case .literal(let literal):
+                        result.append(.literal(literal))
+                    case .interVar(let value):
+                        switch parseEnum(value, type) {
+                            case .success(let interVar): result.append(.interVar(interVar))
+                            case .failure(let err): return .failure(err)
+                        }
+                }
+            }
+            return .success(result)
+        }
+    }
+
+    func rawInterpolationTokens(interpolationChar: Character) -> Result<[RawStringInterToken], String> {
+        var mode: InterpolationParserState = .stringLiteral(currLiteral: "")
+        var result: [RawStringInterToken] = []
         for char: Character? in (Array(self) + [nil]) {
             switch (mode, char) { // State machine
-                case (.stringLiteral, interpolationChar):
-                    mode = .interpolationCharEncountered
-                case (.stringLiteral, _):
-                    if let char {
-                        literal.append(char)
-                    } else {
-                        result.append(.literal(literal))
-                    }
-                case (.interpolationCharEncountered, "{"):
-                    mode = .interpolatedValue("")
+                case (.stringLiteral(let literal), interpolationChar):
+                    mode = .interpolationCharEncountered(prevLiteral: literal)
+                case (.stringLiteral(let literal), let char?):
+                    mode = .stringLiteral(currLiteral: literal + String(char))
+                case (.stringLiteral(let literal), nil):
                     result.append(.literal(literal))
-                    literal = ""
-                case (.interpolationCharEncountered, interpolationChar):
-                    literal.append(interpolationChar)
-                case (.interpolationCharEncountered, _):
-                    literal.append(interpolationChar)
-                    if let char {
-                        literal.append(char)
-                    } else {
-                        result.append(.literal(literal))
-                    }
-                    mode = .stringLiteral
-                case (.interpolatedValue(let value), "}"):
+                case (.interpolationCharEncountered(let literal), "{"):
+                    mode = .interpolationVariable(currVariable: "")
+                    result.append(.literal(literal))
+                case (.interpolationCharEncountered(let literal), interpolationChar):
+                    mode = .interpolationCharEncountered(prevLiteral: literal + String(interpolationChar))
+                case (.interpolationCharEncountered(let literal), let char?):
+                    mode = .stringLiteral(currLiteral: literal + String(interpolationChar) + String(char))
+                case (.interpolationCharEncountered(let literal), nil):
+                    result.append(.literal(literal + String(interpolationChar)))
+                case (.interpolationVariable(let value), "}"):
                     result.append(.interVar(value))
-                    mode = .stringLiteral
-                case (.interpolatedValue(let value), "{"):
+                    mode = .stringLiteral(currLiteral: "")
+                case (.interpolationVariable(let value), "{"):
                     return .failure("Can't parse '\(value + "{")' inside interpolation (Open curly brace is invalid character)")
-                case (.interpolatedValue(let value), interpolationChar):
+                case (.interpolationVariable(let value), interpolationChar):
                     return .failure("Can't parse '\(value + .init(interpolationChar))' inside interpolation ('\(interpolationChar)' is disallowed character)")
-                case (.interpolatedValue(let value), _):
-                    if let char {
-                        mode = .interpolatedValue(value + .init(char))
-                    } else {
-                        return .failure("Unbalanced curly braces")
-                    }
+                case (.interpolationVariable(let value), let char?):
+                    mode = .interpolationVariable(currVariable: value + .init(char))
+                case (.interpolationVariable, nil):
+                    return .failure("Unbalanced curly braces")
             }
         }
         return .success(result.filter { $0 != .literal("") })
     }
 }
 
-public enum StringInterToken: Equatable, Sendable {
+public enum InterToken<T>: Equatable, Sendable where T: Equatable, T: Sendable {
     case literal(String)
-    case interVar(String) // "interpolation variable"
+    case interVar(T) // "interpolation variable"
 }
 
+typealias RawStringInterToken = InterToken<String>
+
 private enum InterpolationParserState {
-    case stringLiteral, interpolationCharEncountered
-    case interpolatedValue(String)
+    case stringLiteral(currLiteral: String)
+    case interpolationCharEncountered(prevLiteral: String)
+    case interpolationVariable(currVariable: String)
 }

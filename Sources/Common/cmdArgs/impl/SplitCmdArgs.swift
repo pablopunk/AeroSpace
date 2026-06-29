@@ -3,20 +3,14 @@ public struct SplitCmdArgs: CmdArgs {
     fileprivate init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .split,
-        allowInConfig: true,
         help: split_help_generated,
         flags: [
-            "--window-id": optionalWindowIdFlag(),
+            "--window-id": windowIdSubArgParser(),
         ],
         posArgs: [newMandatoryPosArgParser(\.arg, parseSplitArg, placeholder: SplitArg.unionLiteral)],
     )
 
     public var arg: Lateinit<SplitArg> = .uninitialized
-
-    public init(rawArgs: [String], _ arg: SplitArg) {
-        self.commonState = .init(rawArgs.slice)
-        self.arg = .initialized(arg)
-    }
 
     public enum SplitArg: String, CaseIterable, Sendable {
         case horizontal, vertical, opposite

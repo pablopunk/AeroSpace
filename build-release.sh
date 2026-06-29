@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 cd "$(dirname "$0")"
 source ./script/setup.sh
 
@@ -68,7 +68,7 @@ should-notarize-release() {
 ### BUILD ###
 #############
 
-./build-docs.sh
+./build-docs.sh --release
 ./build-shell-completion.sh
 
 ./generate.sh

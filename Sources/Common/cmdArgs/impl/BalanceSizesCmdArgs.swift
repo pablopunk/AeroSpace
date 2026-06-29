@@ -3,10 +3,9 @@ public struct BalanceSizesCmdArgs: CmdArgs {
     public init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .balanceSizes,
-        allowInConfig: true,
         help: balance_sizes_help_generated,
         flags: [
-            "--workspace": optionalWorkspaceFlag(),
+            "--workspace": workspaceSubArgParser(),
         ],
         posArgs: [],
     )

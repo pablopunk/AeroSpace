@@ -3,12 +3,11 @@ public struct SwapCmdArgs: CmdArgs {
     public init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .swap,
-        allowInConfig: true,
         help: swap_help_generated,
         flags: [
             "--swap-focus": trueBoolFlag(\.swapFocus),
             "--wrap-around": trueBoolFlag(\.wrapAround),
-            "--window-id": optionalWindowIdFlag(),
+            "--window-id": windowIdSubArgParser(),
         ],
         posArgs: [newMandatoryPosArgParser(\.target, parseCardinalOrDfsDirection, placeholder: CardinalOrDfsDirection.unionLiteral)],
     )
@@ -16,11 +15,6 @@ public struct SwapCmdArgs: CmdArgs {
     public var target: Lateinit<CardinalOrDfsDirection> = .uninitialized
     public var swapFocus: Bool = false
     public var wrapAround: Bool = false
-
-    public init(rawArgs: [String], target: CardinalOrDfsDirection) {
-        self.commonState = .init(rawArgs.slice)
-        self.target = .initialized(target)
-    }
 }
 
 func parseSwapCmdArgs(_ args: StrArrSlice) -> ParsedCmd<SwapCmdArgs> {

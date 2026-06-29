@@ -46,33 +46,18 @@ struct PosArgParserContext {
     let argPlaceholderIfMandatory: String?
 }
 
-public struct ParsedCliArgs<T> {
-    var value: Parsed<T>
-    var advanceBy: Int
-
-    public init(_ value: Parsed<T>, advanceBy: Int) {
-        self.value = value
-        self.advanceBy = advanceBy
-    }
-
-    public static func succ(_ value: T, advanceBy: Int) -> ParsedCliArgs<T> {
-        .init(.success(value), advanceBy: advanceBy)
-    }
-
-    public static func fail(_ msg: String, advanceBy: Int) -> ParsedCliArgs<T> {
-        .init(.failure(msg), advanceBy: advanceBy)
-    }
-
-    public func flatMap<R>(_ mapper: (T) -> ParsedCliArgs<R>) -> ParsedCliArgs<R> {
-        switch value {
-            case .failure(let msg): ParsedCliArgs<R>(.failure(msg), advanceBy: advanceBy)
-            case .success(let value): mapper(value)
-        }
-    }
-
-    public func map<R>(_ mapper: (T) -> R) -> ParsedCliArgs<R> {
-        flatMap { ParsedCliArgs<R>(.success(mapper($0)), advanceBy: advanceBy) }
-    }
+func dashDashArg<Root: AeroAny>(mandatory: Bool) -> PosArgParser<Root, ()> {
+    return ArgParser(
+        \.noopKeyPath,
+        { input in
+            switch (input.arg, mandatory) {
+                case ("--", _): .succ((), advanceBy: 1)
+                case (_, false): .succ((), advanceBy: 0)
+                case (_, true): .fail("Expected: --. Got: \(input.arg.singleQuoted)", advanceBy: 0)
+            }
+        },
+        context: PosArgParserContext(argPlaceholderIfMandatory: mandatory ? "--" : nil),
+    )
 }
 
 func newMandatoryPosArgParser<Root, Value>(
@@ -91,9 +76,11 @@ func newMandatoryPosArgParser<Root, Value>(
 }
 
 // todo reuse in config
-public func parseEnum<T: RawRepresentable>(_ raw: String, _ _: T.Type) -> Parsed<T> where T.RawValue == String, T: CaseIterable {
-    T(rawValue: raw).orFailure("Can't parse '\(raw)'.\nPossible values: \(T.unionLiteral)")
+public func parseEnum<T: RawRepresentable>(_ raw: String, _ _: T.Type) -> ResOrStr<T> where T.RawValue == String, T: CaseIterable {
+    T(rawValue: raw).toResult("Can't parse '\(raw)'.\nPossible values: \(T.unionLiteral)")
 }
+
+public func parseUInt32(_ str: String) -> ResOrStr<UInt32> { UInt32(str).toResult("Can't convert '\(str)' to UInt32") }
 
 func parseCardinalDirectionArg(i: PosArgParserInput) -> ParsedCliArgs<CardinalDirection> {
     .init(parseEnum(i.arg, CardinalDirection.self), advanceBy: 1)
@@ -103,4 +90,6 @@ func parseCardinalOrDfsDirection(i: PosArgParserInput) -> ParsedCliArgs<Cardinal
     .init(parseEnum(i.arg, CardinalOrDfsDirection.self), advanceBy: 1)
 }
 
-func upcastArgParserFun<Input, T>(_ fun: @escaping ArgParserFun<Input, T>) -> ArgParserFun<Input, T?> { { fun($0).map { $0 } } }
+func upcastArgParserFun<Input, T>(_ fun: @escaping ArgParserFun<Input, T>) -> ArgParserFun<Input, T?> {
+    { fun($0).map(Optional.init) }
+}

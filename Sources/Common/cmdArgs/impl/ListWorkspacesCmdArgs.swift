@@ -7,7 +7,6 @@ public struct ListWorkspacesCmdArgs: CmdArgs {
     /*conforms*/ public var commonState: CmdArgsCommonState
     public static let parser: CmdParser<Self> = .init(
         kind: .listWorkspaces,
-        allowInConfig: false,
         help: list_workspaces_help_generated,
         flags: [
             // Aliases
@@ -36,11 +35,11 @@ public struct ListWorkspacesCmdArgs: CmdArgs {
     fileprivate var focused: Bool = false // Alias
 
     public var filteringOptions = FilteringOptions()
-    public var _format: [StringInterToken] = [.interVar("workspace")]
+    public var _format: [InterToken<InterVar>] = [.interVar(.formatVar(.workspace(.workspaceName)))]
     public var outputOnlyCount: Bool = false
     public var json: Bool = false
 
-    public struct FilteringOptions: ConvenienceCopyable, Equatable, Sendable {
+    public struct FilteringOptions: ConvenienceMutable, Equatable, Sendable {
         public var onMonitors: [MonitorId] = []
         public var visible: Bool?
         public var empty: Bool?
@@ -48,7 +47,7 @@ public struct ListWorkspacesCmdArgs: CmdArgs {
 }
 
 extension ListWorkspacesCmdArgs {
-    public var format: [StringInterToken] { _format.isEmpty ? [.interVar("workspace")] : _format }
+    public var format: [InterToken<InterVar>] { _format.isEmpty ? [.interVar(.formatVar(.workspace(.workspaceName)))] : _format }
 }
 
 func parseListWorkspacesCmdArgs(_ args: StrArrSlice) -> ParsedCmd<ListWorkspacesCmdArgs> {
@@ -85,16 +84,11 @@ func parseMonitorIds(input: SubArgParserInput) -> ParsedCliArgs<[MonitorId]> {
     var i = 0
     for monitor in args {
         switch Int.init(monitor) {
-            case .some(let unwrapped):
-                monitors.append(.index(unwrapped - 1))
-            case _ where monitor == "mouse":
-                monitors.append(.mouse)
-            case _ where monitor == "all":
-                monitors.append(.all)
-            case _ where monitor == "focused":
-                monitors.append(.focused)
-            default:
-                return .fail("Can't parse monitor ID '\(monitor)'. \(possibleValues)", advanceBy: i + 1)
+            case let unwrapped?: monitors.append(.index(unwrapped - 1))
+            case _ where monitor == "mouse": monitors.append(.mouse)
+            case _ where monitor == "all": monitors.append(.all)
+            case _ where monitor == "focused": monitors.append(.focused)
+            default: return .fail("Can't parse monitor ID '\(monitor)'. \(possibleValues)", advanceBy: i + 1)
         }
         i += 1
     }

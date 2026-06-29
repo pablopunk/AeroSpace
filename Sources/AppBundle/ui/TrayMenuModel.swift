@@ -13,6 +13,14 @@ public final class TrayMenuModel: ObservableObject {
     @Published var workspaces: [WorkspaceViewModel] = []
     @Published var experimentalUISettings: ExperimentalUISettings = ExperimentalUISettings()
     @Published var sponsorshipMessage: String = sponsorshipPrompts.randomElement().orDie()
+    @Published var lastReloadConfigContainedWarnings: Bool = false
+    @Published var axPermissionStatus: AxPermissionStatus = .waitingWithPrompt
+}
+
+enum AxPermissionStatus: Equatable {
+    case granted
+    case waiting
+    case waitingWithPrompt
 }
 
 @MainActor func updateTrayText() {
@@ -85,23 +93,16 @@ struct TrayItem: Hashable, Identifiable {
     let hasFullscreenWindows: Bool
     var systemImageName: String? {
         // System image type is only valid for numbers 0 to 50 and single capital char workspace name
-        if let number = Int(name) {
-            if !(0 ... 50).contains(number) { return nil }
-        } else if name.count == 1 {
-            if !validLetters.contains(name) { return nil }
-        } else {
-            return nil
+        switch Int(name) {
+            case let number?: if !(0 ... 50).contains(number) { return nil }
+            case nil where name.count == 1: if !validLetters.contains(name) { return nil }
+            default: return nil
         }
         let lowercasedName = name.lowercased()
-        switch type {
-            case .mode:
-                return "\(lowercasedName).circle"
-            case .workspace:
-                if isActive {
-                    return "\(lowercasedName).square.fill"
-                } else {
-                    return "\(lowercasedName).square"
-                }
+        return switch type {
+            case .mode: "\(lowercasedName).circle"
+            case .workspace where isActive: "\(lowercasedName).square.fill"
+            case .workspace: "\(lowercasedName).square"
         }
     }
     var id: String {

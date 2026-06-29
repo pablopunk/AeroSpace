@@ -3,10 +3,9 @@ public struct DebugWindowsCmdArgs: CmdArgs {
     public init(rawArgs: StrArrSlice) { self.commonState = .init(rawArgs) }
     public static let parser: CmdParser<Self> = .init(
         kind: .debugWindows,
-        allowInConfig: false,
         help: debug_windows_help_generated,
         flags: [
-            "--window-id": ArgParser(\.windowId, upcastArgParserFun(parseUInt32SubArg)),
+            "--window-id": windowIdSubArgParser(),
         ],
         posArgs: [],
     )

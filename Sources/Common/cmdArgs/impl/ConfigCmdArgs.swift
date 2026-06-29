@@ -2,7 +2,6 @@ public struct ConfigCmdArgs: CmdArgs, Equatable {
     /*conforms*/ public var commonState: CmdArgsCommonState
     public static let parser: CmdParser<Self> = .init(
         kind: .config,
-        allowInConfig: false,
         help: config_help_generated,
         flags: [
             "--json": trueBoolFlag(\.json),
@@ -10,7 +9,7 @@ public struct ConfigCmdArgs: CmdArgs, Equatable {
             "--major-keys": trueBoolFlag(\.majorKeys),
             "--all-keys": trueBoolFlag(\.allKeys),
             "--config-path": trueBoolFlag(\.configPath),
-            "--get": singleValueSubArgParser(\.keyNameToGet, "<name>") { $0 },
+            "--get": singleValueSubArgParser(\.keyNameToGet, "<name>", Result.success),
         ],
         posArgs: [],
     )

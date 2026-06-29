@@ -1,11 +1,8 @@
 // periphery:ignore:all
-import AppKit
 import OrderedCollections
 
 extension Sequence {
-    public func filterNotNil<Unwrapped>() -> [Unwrapped] where Element == Unwrapped? {
-        compactMap { $0 }
-    }
+    public func filterNotNil<Unwrapped>() -> [Unwrapped] where Element == Unwrapped? { compactMap(id) }
 
     public func filterIsInstance<R>(of _: R.Type) -> [R] {
         var result: [R] = []
@@ -35,6 +32,21 @@ extension Sequence {
         return .success(result)
     }
 
+    public func mapAllOrFailure<T>(_ transform: (Self.Element) -> ParsedCmd<T>) -> ParsedCmd<[T]> {
+        var result: [T] = []
+        for element in self {
+            switch transform(element) {
+                case .cmd(let element):
+                    result.append(element)
+                case .help(let help):
+                    return .help(help)
+                case .failure(let cmdParsingFailure):
+                    return .failure(cmdParsingFailure)
+            }
+        }
+        return .cmd(result)
+    }
+
     public func mapAllOrFailures<T, E>(_ transform: (Self.Element) -> Result<T, E>) -> Result<[T], [E]> {
         var result: [T] = []
         var errors: [E] = []
@@ -55,7 +67,7 @@ extension Sequence {
         self.min(by: { a, b in selector(a) < selector(b) })
     }
 
-    @inlinable public func maxByOrDie(_ selector: (Self.Element) -> some Comparable) -> Self.Element? {
+    @inlinable public func maxByOrDie(_ selector: (Self.Element) -> some Comparable) -> Self.Element {
         self.maxBy(selector) ?? dieT("Empty sequence")
     }
 
@@ -106,19 +118,30 @@ extension Sequence {
             return (index, $0)
         }
     }
-}
 
-extension Sequence where Self.Element: Comparable {
-    public func minOrDie() -> Self.Element {
+    public func minOrDie() -> Self.Element where Self.Element: Comparable {
         self.min() ?? dieT("Empty sequence")
     }
 
-    public func maxOrDie() -> Self.Element {
+    public func maxOrDie() -> Self.Element where Self.Element: Comparable {
         self.max() ?? dieT("Empty sequence")
+    }
+
+    public func toSet() -> Set<Element> where Element: Hashable { Set(self) }
+    public func toOrderedSet() -> OrderedSet<Element> where Element: Hashable { OrderedSet(self) }
+
+    public var sequencePattern: SequencePattern<Self> {
+        var iterator = makeIterator()
+        guard let first = iterator.next() else { return .empty }
+        guard let second = iterator.next() else { return .one(first) }
+        guard let _ = iterator.next() else { return .two(first, second) }
+        return .many
     }
 }
 
-extension Sequence where Element: Hashable {
-    public func toSet() -> Set<Element> { Set(self) }
-    public func toOrderedSet() -> OrderedSet<Element> { OrderedSet(self) }
+public enum SequencePattern<Seq: Sequence> {
+    case empty
+    case one(Seq.Element)
+    case two(Seq.Element, Seq.Element)
+    case many
 }

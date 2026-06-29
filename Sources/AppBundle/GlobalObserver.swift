@@ -9,19 +9,19 @@ enum GlobalObserver {
             return
         }
         let notifName = notification.name.rawValue
-        Task { @MainActor in
+        Task.startUnstructured { @MainActor in
             if !TrayMenuModel.shared.isEnabled { return }
             if notifName == NSWorkspace.didActivateApplicationNotification.rawValue {
-                scheduleRefreshSession(.globalObserver(notifName), optimisticallyPreLayoutWorkspaces: true)
+                scheduleCancellableCompleteRefreshSession(.globalObserver(notifName), optimisticallyPreLayoutWorkspaces: true)
             } else {
-                scheduleRefreshSession(.globalObserver(notifName))
+                scheduleCancellableCompleteRefreshSession(.globalObserver(notifName))
             }
         }
     }
 
     private static func onHideApp(_ notification: Notification) {
         let notifName = notification.name.rawValue
-        Task { @MainActor in
+        Task.startUnstructured { @MainActor in
             guard let token: RunSessionGuard = .isServerEnabled else { return }
             try await runLightSession(.globalObserver(notifName), token) {
                 if config.automaticallyUnhideMacosHiddenApps {
@@ -57,7 +57,7 @@ enum GlobalObserver {
             // todo reduce number of refreshSession in the callback
             //  resetManipulatedWithMouseIfPossible might call its own refreshSession
             //  The end of the callback calls refreshSession
-            Task { @MainActor in
+            Task.startUnstructured { @MainActor in
                 guard let token: RunSessionGuard = .isServerEnabled else { return }
                 try await resetManipulatedWithMouseIfPossible()
                 let mouseLocation = mouseLocation
@@ -71,7 +71,7 @@ enum GlobalObserver {
                     // Detect close button clicks for unfocused windows. Yes, kAXUIElementDestroyedNotification is that unreliable
                     //  And trigger new window detection that could be delayed due to mouseDown event
                     default:
-                        scheduleRefreshSession(.globalObserverLeftMouseUp)
+                        scheduleCancellableCompleteRefreshSession(.globalObserverLeftMouseUp)
                 }
             }
         }

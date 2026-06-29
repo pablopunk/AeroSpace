@@ -10,38 +10,52 @@ struct MacosNativeFullscreenCommand: Command {
     let args: MacosNativeFullscreenCmdArgs
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
-    func run(_ env: CmdEnv, _ io: CmdIo) async throws -> Bool {
-        guard let target = args.resolveTargetOrReportError(env, io) else { return false }
+    func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
+        guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
         guard let window = target.windowOrNil else {
-            return io.err(noWindowIsFocused)
+            return .fail(io.err(noWindowIsFocused))
         }
-        let prevState = try await window.isMacosFullscreen
+        guard let prevState = try? await window.isMacosFullscreen(.nonCancellable) else { return .fail(io.err(bugPrompt())) }
         let newState: Bool = switch args.toggle {
             case .on: true
             case .off: false
             case .toggle: !prevState
         }
         if newState == prevState {
-            if !args.failIfNoop {
-                io.err((newState ? "Already fullscreen. " : "Already not fullscreen. ") +
-                    "Tip: use --fail-if-noop to exit with non-zero exit code")
+            return switch args.failIfNoop {
+                case true: .fail
+                case false:
+                    .succ(io.err((newState ? "Already fullscreen. " : "Already not fullscreen. ") +
+                            "Tip: use --fail-if-noop to exit with non-zero exit code"))
             }
-            return !args.failIfNoop
         }
         window.asMacWindow().setNativeFullscreen(newState)
         guard let workspace = window.visualWorkspace else {
-            return io.err(windowIsntPartOfTree(window))
+            return .fail(io.err(windowIsntPartOfTree(window)))
         }
         if newState { // Enter fullscreen
             window.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
         } else { // Exit fullscreen
             switch window.layoutReason {
                 case .macos(let prevParentKind):
-                    try await exitMacOsNativeUnconventionalState(window: window, prevParentKind: prevParentKind, workspace: workspace)
+                    do {
+                        try await exitMacOsNativeUnconventionalState(
+                            window: window,
+                            prevParentKind: prevParentKind,
+                            workspace: workspace,
+                            .nonCancellable,
+                        )
+                    } catch {
+                        return .fail(io.err(bugPrompt()))
+                    }
                 default:
-                    try await window.relayoutWindow(on: workspace)
+                    do {
+                        try await window.relayoutWindow(on: workspace, .nonCancellable)
+                    } catch {
+                        return .fail(io.err(bugPrompt()))
+                    }
             }
         }
-        return true
+        return .succ
     }
 }
