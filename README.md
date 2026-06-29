@@ -64,9 +64,11 @@ Both configs in action:
 
 https://github.com/user-attachments/assets/d53b9ad2-c1e0-444d-888b-23bd2c970066
 
-### 🆕✨ Focus navigation follows keyboard layout on single monitor
+### 🆕✨ Focus navigation follows keyboard layout 
 
 On a single display, pressing focus-left/right/up/down at the monitor edge jumps to the adjacent workspace on the keyboard grid (same layout as the workspace preview HUD). No extra config needed.
+
+On multiple displays, this behavior actually changes focus to the proper monitor.
 
 ## ⚠️ END OF FEATURES OF THIS FORK ⚠️
 

@@ -163,6 +163,7 @@ extension Workspace {
 }
 
 @MainActor func onFocusChanged(_ env: CmdEnv, _ io: CmdIo, _ focus: LiveFocus) async -> Int32ExitCode {
+    WorkspacePreviewViewModel.shared.onFocusChanged()
     broadcastEvent(.focusChanged(
         windowId: focus.windowOrNil?.windowId,
         workspace: focus.workspace.name,
@@ -171,6 +172,7 @@ extension Workspace {
 }
 
 @MainActor private func onWorkspaceChanged(_ oldWorkspace: String, _ newWorkspace: String, _ focus: LiveFocus) {
+    WorkspacePreviewViewModel.shared.onWorkspaceChanged()
     broadcastEvent(.workspaceChanged(
         workspace: newWorkspace,
         prevWorkspace: oldWorkspace,
